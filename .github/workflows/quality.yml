@@ -1,0 +1,98 @@
+name: Kalite Kapilari
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend build, format, unit ve mimari
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Paketleri güvenlik denetimiyle yükle
+        run: dotnet restore TupBayiProje.slnx -p:NuGetAuditMode=all -p:NuGetAuditLevel=low -p:TreatWarningsAsErrors=true
+      - name: Format ve statik analiz
+        run: dotnet format TupBayiProje.slnx --verify-no-changes --no-restore
+      - name: Derle
+        run: dotnet build TupBayiProje.slnx --no-restore --configuration Release
+      - name: Birim ve mimari testler
+        run: dotnet test TupBayiProje.slnx --no-build --configuration Release
+
+  contracts:
+    name: OpenAPI contract ve güvenlik
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: contracts
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: contracts/package-lock.json
+      - run: npm ci
+      - name: Contract validation
+        run: npm run validate
+      - name: Pozitif ve negatif contract testleri
+        run: npm test
+      - name: Bağımlılık güvenliği
+        run: npm audit --audit-level=high
+
+  admin-web:
+    name: Admin Web lint, test, build ve güvenlik
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: admin-web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: admin-web/package-lock.json
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - run: npm audit --audit-level=high
+
+  flutter:
+    name: Flutter analiz, test ve build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: flutter
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.41.6"
+          channel: stable
+          cache: true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - run: flutter pub get --enforce-lockfile
+      - run: dart format --output=none --set-exit-if-changed apps packages
+      - run: flutter analyze
+      - run: flutter test apps/tup_mobile
+      - run: flutter test apps/tup_desktop
+      - name: Android debug build
+        run: flutter build apk --debug
+        working-directory: flutter/apps/tup_mobile
