@@ -1,0 +1,12 @@
+{
+  "name": "tupbayiproje-factory",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "check": "node --check src/durum-makinesi.mjs && node --check test/durum-makinesi.test.mjs",
+    "test": "node --test"
+  }
+}
