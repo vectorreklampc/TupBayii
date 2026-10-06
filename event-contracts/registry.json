@@ -1,0 +1,34 @@
+{
+  "events": [
+    {
+      "name": "SaleCompleted",
+      "SchemaRevision": 1,
+      "schema": "schemas/SaleCompleted.schema.json",
+      "example": "examples/SaleCompleted.json"
+    },
+    {
+      "name": "DeliveryCompleted",
+      "SchemaRevision": 1,
+      "schema": "schemas/DeliveryCompleted.schema.json",
+      "example": "examples/DeliveryCompleted.json"
+    },
+    {
+      "name": "PaymentReceived",
+      "SchemaRevision": 1,
+      "schema": "schemas/PaymentReceived.schema.json",
+      "example": "examples/PaymentReceived.json"
+    },
+    {
+      "name": "CylinderTransferred",
+      "SchemaRevision": 1,
+      "schema": "schemas/CylinderTransferred.schema.json",
+      "example": "examples/CylinderTransferred.json"
+    },
+    {
+      "name": "CollectionPosted",
+      "SchemaRevision": 1,
+      "schema": "schemas/CollectionPosted.schema.json",
+      "example": "examples/CollectionPosted.json"
+    }
+  ]
+}

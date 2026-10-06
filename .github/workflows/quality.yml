@@ -50,6 +50,39 @@ jobs:
       - name: Bağımlılık güvenliği
         run: npm audit --audit-level=high
 
+  event-contracts:
+    name: Olay sözleşmesi registry ve uyumluluk
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: event-contracts
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: event-contracts/package-lock.json
+      - run: npm ci
+      - name: Registry ve örnek payload doğrulaması
+        run: npm run validate
+      - name: Pozitif, negatif ve revision testleri
+        run: npm test
+      - name: Base branch ile revision uyumluluğu
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          if git cat-file -e "$BASE_SHA:event-contracts/registry.json"; then
+            mkdir -p "$RUNNER_TEMP/event-contracts-base"
+            git archive "$BASE_SHA" event-contracts | tar -x -C "$RUNNER_TEMP/event-contracts-base"
+            node scripts/uyumluluk-kontrolu.mjs "$RUNNER_TEMP/event-contracts-base/event-contracts" .
+          fi
+      - name: Bağımlılık güvenliği
+        run: npm audit --audit-level=high
+
   admin-web:
     name: Admin Web lint, test, build ve güvenlik
     runs-on: ubuntu-latest
