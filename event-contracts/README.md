@@ -12,7 +12,8 @@ Kayıt defterinin giriş noktası [`registry.json`](registry.json) dosyasıdır.
 - `CylinderTransferred`
 - `CollectionPosted`
 
-Olay adı revision eki taşımaz. `SaleCompleted.v1` yasaktır; revision yalnız
+Olay adı revision eki taşımaz. `SaleCompleted.v1`, `SaleCompletedV2` ve
+`SaleCompleted_v1` gibi adlar yasaktır; revision yalnız
 registry ve schema içindeki `SchemaRevision` metadata'sıyla temsil edilir.
 Başlangıç payload'ları yalnız normatif ortak metadata'yı içerir: message,
 correlation ve causation kimlikleri; kaynak kimliği ve version'ı; UTC oluşma

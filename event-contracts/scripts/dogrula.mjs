@@ -5,7 +5,9 @@ import { pathToFileURL } from "node:url";
 import Ajv2020 from "ajv/dist/2020.js";
 import addFormats from "ajv-formats";
 
-const surumEkliOlayAdi = /\.v\d+$/u;
+// Revision yalniz SchemaRevision metadata'sinda tasinir. Olay adinin diger
+// bicim kurallari ayri bir sozlesme olmadan burada daraltilmaz.
+const surumEkliOlayAdi = /(?:[._-]?[vV]\d+|\d+)$/u;
 
 async function jsonOku(dosyaYolu) {
   return JSON.parse(await readFile(dosyaYolu, "utf8"));

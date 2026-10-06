@@ -54,6 +54,29 @@ test("baslangic olaylari surum eki olmadan kayitlidir", async () => {
   assert.ok(kayitDefteri.events.every((olay) => !/\.v\d+$/u.test(olay.name)));
 });
 
+for (const surumEkliAd of [
+  "SaleCompleted.v1",
+  "SaleCompleted.V1",
+  "SaleCompletedV2",
+  "SaleCompleted_v1",
+  "SaleCompleted-v1",
+  "SaleCompleted2",
+]) {
+  test(`${surumEkliAd} surum ekli olay adi reddedilir`, async (t) => {
+    const geciciKok = await geciciKayitDefteriOlustur(t, "tbp-26-ad-");
+
+    const registryYolu = path.join(geciciKok, "registry.json");
+    const registry = JSON.parse(await readFile(registryYolu, "utf8"));
+    registry.events[0].name = surumEkliAd;
+    await writeFile(registryYolu, `${JSON.stringify(registry, null, 2)}\n`);
+
+    await assert.rejects(
+      kayitDefteriniDogrula(geciciKok),
+      /Olay adi surum eki tasiyamaz/u,
+    );
+  });
+}
+
 test("her baslangic olayinin ornek payloadi semasina uyar", async () => {
   const sonuc = await kayitDefteriniDogrula(kokYolu);
 
