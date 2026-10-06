@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>TupBayiProje.Moduller.Tenancy.Uygulama</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Ortak\Gozlemlenebilirlik\TupBayiProje.Gozlemlenebilirlik.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,6 +1,16 @@
 <Solution>
+  <Folder Name="/src/Moduller/Tenancy/">
+    <Project Path="src/Moduller/Tenancy/Altyapi/TupBayiProje.Moduller.Tenancy.Altyapi.csproj" />
+    <Project Path="src/Moduller/Tenancy/Uygulama/TupBayiProje.Moduller.Tenancy.Uygulama.csproj" />
+  </Folder>
+  <Folder Name="/src/Ortak/">
+    <Project Path="src/Ortak/Gozlemlenebilirlik/TupBayiProje.Gozlemlenebilirlik.csproj" />
+  </Folder>
   <Folder Name="/src/Sunum/">
     <Project Path="src/Sunum/TupBayiProje.Api/TupBayiProje.Api.csproj" />
+  </Folder>
+  <Folder Name="/tests/Birim/">
+    <Project Path="tests/Birim/TupBayiProje.Tenancy.BirimTests/TupBayiProje.Tenancy.BirimTests.csproj" />
   </Folder>
   <Folder Name="/tests/Mimari/">
     <Project Path="tests/Mimari/TupBayiProje.MimariTests/TupBayiProje.MimariTests.csproj" />

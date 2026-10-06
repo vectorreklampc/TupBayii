@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>TupBayiProje.Moduller.Tenancy.Altyapi</RootNamespace>
+    <TupBayiVeritabaniSiniri>Master</TupBayiVeritabaniSiniri>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Uygulama\TupBayiProje.Moduller.Tenancy.Uygulama.csproj" />
+    <ProjectReference Include="..\..\..\Ortak\Gozlemlenebilirlik\TupBayiProje.Gozlemlenebilirlik.csproj" />
+  </ItemGroup>
+</Project>
