@@ -67,6 +67,26 @@ npm.cmd test
 Testler gecis tablosunu, gecersiz gecis reddini, denetim alanlarini, process
 restart sonrasi devam etmeyi ve kalici idempotent retry davranisini kanitlar.
 
+## Invariant-Driven Design kapisi
+
+`TBP-233` kapsaminda global invariant metadata'si
+`invariants/kayit-defteri.json` dosyasinda surumlenir. Insan-okunur normatif
+tanimlar repository kokundeki `TupBayiProje_Global_Invariantlar.md` dosyasinda
+kalir; test iki kaynagin kimliklerini birebir esler.
+
+`src/invariant-kapisi.mjs`, her invariant icin dis kalite kapisinin urettigi
+kaniti alir. Yalniz butun kayitlar `KANITLANDI` ise `ACCEPTED` verir. `IHLAL`,
+`BILINMIYOR`, eksik kanit, bilinmeyen invariant veya bozuk kayit defteri
+fail-closed `BLOCKED` sonucudur. Kanit kayitli `testKimligi` ile eslesir;
+`CRITICAL` kayit ayrica acik Human Gate onay kaniti tasir. Bos veya eksiltilmis
+kanonik manifest kabul edilmez. Kapi mimari/security/domain testinin yerine
+gecmez; bu testlerin sonuclarini kalici invariant kimlikleriyle toplar.
+
+Her HIGH/CRITICAL kayit icin declarative kural
+`invariants/yurutulebilir-kurallar.json`, pozitif ve ihlal girdisi
+`test/fixtures/invariant-kanitlari.json` icinde bulunur. Fixture kapsami ve
+metadata drift'i `test/invariant-kapisi.test.mjs` ile dogrulanir.
+
 ## Rollback ve recovery
 
 Kod rollback'i mevcut SQLite semasini silmez. Bu ticket yalniz additive ilk

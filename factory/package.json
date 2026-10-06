@@ -6,7 +6,7 @@
     "node": ">=24"
   },
   "scripts": {
-    "check": "node --check src/durum-makinesi.mjs && node --check test/durum-makinesi.test.mjs",
+    "check": "node --check src/durum-makinesi.mjs && node --check src/invariant-kapisi.mjs && node --check test/durum-makinesi.test.mjs && node --check test/invariant-kapisi.test.mjs",
     "test": "node --test"
   }
 }
