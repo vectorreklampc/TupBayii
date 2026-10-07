@@ -11,6 +11,7 @@ TupBayiProje, tüp bayilerinin merkez ve saha operasyonlarını aynı ürün alt
 | `admin-web/` | Merkezi SaaS yönetim web uygulaması | `TBP-17` |
 | `infrastructure/` | Yerel ve uzak ortam altyapısı | `TBP-18` ve sonraki altyapı işleri |
 | `factory/` | Otonom yazılım fabrikası | P02 Jira işleri |
+| `contracts/` | Kanonik OpenAPI belgesi ve contract doğrulaması | `TBP-21` |
 | `docs/` | Teknik belgeler ve ADR kayıtları | P00 ve ilgili Jira işleri |
 
 Kökteki `TupBayiProje_*.md` belgeleri P00 kapsamında oluşturulan normatif standartlardır. İş gereksinimleri, sıralama ve uygunluk için canlı Jira `TBP` projesi Source of Truth'tur.

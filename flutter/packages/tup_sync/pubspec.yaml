@@ -1,0 +1,12 @@
+name: tup_sync
+description: Offline outbox, senkronizasyon ve conflict orkestrasyonu siniri.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.11.4
+
+resolution: workspace
+
+dev_dependencies:
+  lints: ^6.0.0

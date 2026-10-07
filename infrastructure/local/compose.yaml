@@ -1,0 +1,68 @@
+name: tupbayiproje-yerel
+
+services:
+  postgresql:
+    image: postgres:18.0-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-tupbayi_master}
+      POSTGRES_USER: ${POSTGRES_USER:-tupbayi}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD tanimlanmalidir}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgresql_veri:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  pgbouncer:
+    image: edoburu/pgbouncer:v1.26.0-p0
+    environment:
+      DB_HOST: postgresql
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB:-tupbayi_master}
+      DB_USER: ${POSTGRES_USER:-tupbayi}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD tanimlanmalidir}
+      AUTH_TYPE: scram-sha-256
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: ${PGBOUNCER_MAX_CLIENT_CONN:-100}
+      DEFAULT_POOL_SIZE: ${PGBOUNCER_DEFAULT_POOL_SIZE:-20}
+    ports:
+      - "127.0.0.1:${PGBOUNCER_PORT:-6432}:5432"
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 5432 -U $$DB_USER -d $$DB_NAME"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+  redis:
+    image: redis:8.2.1-alpine
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --requirepass
+      - ${REDIS_PASSWORD:?REDIS_PASSWORD tanimlanmalidir}
+    environment:
+      REDISCLI_AUTH: ${REDIS_PASSWORD:?REDIS_PASSWORD tanimlanmalidir}
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_veri:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+volumes:
+  postgresql_veri:
+  redis_veri:

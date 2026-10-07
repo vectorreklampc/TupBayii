@@ -1,0 +1,12 @@
+name: tup_auth
+description: Kimlik dogrulama oturumu ve yetki baglami siniri.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.11.4
+
+resolution: workspace
+
+dev_dependencies:
+  lints: ^6.0.0

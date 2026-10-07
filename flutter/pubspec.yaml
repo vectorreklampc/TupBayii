@@ -1,0 +1,16 @@
+name: tup_workspace
+description: TupBayiProje Flutter istemcileri ve ortak paketleri.
+publish_to: none
+
+environment:
+  sdk: ^3.11.4
+
+workspace:
+  - apps/tup_desktop
+  - apps/tup_mobile
+  - packages/tup_core
+  - packages/tup_api
+  - packages/tup_auth
+  - packages/tup_design_system
+  - packages/tup_database
+  - packages/tup_sync

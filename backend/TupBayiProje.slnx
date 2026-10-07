@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/Sunum/">
+    <Project Path="src/Sunum/TupBayiProje.Api/TupBayiProje.Api.csproj" />
+  </Folder>
+  <Folder Name="/tests/Mimari/">
+    <Project Path="tests/Mimari/TupBayiProje.MimariTests/TupBayiProje.MimariTests.csproj" />
+  </Folder>
+</Solution>

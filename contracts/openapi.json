@@ -1,0 +1,74 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "TupBayiProje HTTP API",
+    "version": "0.1.0",
+    "description": "TBP-21 contract temeli. Onayli endpoint'ler kendi Jira islerinde eklenir."
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Hata": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "message", "traceId"],
+        "properties": {
+          "code": { "type": "string", "pattern": "^[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)*$" },
+          "message": { "type": "string" },
+          "traceId": { "type": "string" },
+          "details": { "type": "array", "items": { "$ref": "#/components/schemas/DogrulamaDetayi" } }
+        }
+      },
+      "DogrulamaDetayi": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["field", "code"],
+        "properties": {
+          "field": { "type": "string" },
+          "code": { "type": "string", "pattern": "^[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)*$" }
+        }
+      },
+      "Sayfalama": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["page", "pageSize", "totalItems", "totalPages"],
+        "properties": {
+          "page": { "type": "integer", "minimum": 1 },
+          "pageSize": { "type": "integer", "minimum": 1 },
+          "totalItems": { "type": "integer", "minimum": 0 },
+          "totalPages": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "headers": {
+      "TraceId": {
+        "description": "Istek ile iliskili guvenli iz kimligi; hata govdesindeki traceId ile aynidir.",
+        "schema": { "type": "string" }
+      }
+    },
+    "responses": {
+      "Hata": {
+        "description": "Kararli hata kodu ve guvenli aciklama.",
+        "headers": { "TraceId": { "$ref": "#/components/headers/TraceId" } },
+        "content": {
+          "application/json": { "schema": { "$ref": "#/components/schemas/Hata" } }
+        }
+      }
+    },
+    "parameters": {
+      "Page": {
+        "name": "page", "in": "query", "description": "Bir tabanli sayfa numarasi.",
+        "schema": { "type": "integer", "minimum": 1 }
+      },
+      "PageSize": {
+        "name": "pageSize", "in": "query", "description": "Sunucunun sinirladigi sayfa boyutu.",
+        "schema": { "type": "integer", "minimum": 1 }
+      },
+      "IdempotencyKey": {
+        "name": "Idempotency-Key", "in": "header", "required": true,
+        "description": "Ayni logical islem retry'larinda ayni kalan client anahtari.",
+        "schema": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

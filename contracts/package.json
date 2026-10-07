@@ -1,0 +1,12 @@
+{
+  "name": "tupbayiproje-contracts",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "validate": "node scripts/dogrula.mjs",
+    "test": "node --test"
+  },
+  "devDependencies": {
+    "@apidevtools/swagger-parser": "13.1.0"
+  }
+}

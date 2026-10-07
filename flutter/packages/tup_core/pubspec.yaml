@@ -1,0 +1,12 @@
+name: tup_core
+description: Flutter istemcilerinin framework bagimsiz ortak cekirdegi.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.11.4
+
+resolution: workspace
+
+dev_dependencies:
+  lints: ^6.0.0
