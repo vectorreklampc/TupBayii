@@ -128,6 +128,9 @@ jobs:
           cache: npm
           cache-dependency-path: admin-web/package-lock.json
       - run: npm ci
+      - name: Kanonik mock server bagimliliklarini yukle
+        run: npm ci
+        working-directory: contracts
       - name: Admin Web API istemcisini kanonik OpenAPI'den tekrar uret
         run: node ../contracts/scripts/admin-web-client-uret.mjs
       - name: Uretilen Admin Web API istemcisinin deterministik oldugunu dogrula
