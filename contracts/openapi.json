@@ -1,5 +1,5 @@
 {
-  "openapi": "9.9.9",
+  "openapi": "3.1.0",
   "info": {
     "title": "TupBayiProje HTTP API",
     "version": "0.1.0",
