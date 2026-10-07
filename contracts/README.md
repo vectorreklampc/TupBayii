@@ -14,6 +14,20 @@ npm run mock
 
 OpenAPI 3.1 belgesi önce Swagger Parser ile yapısal ve `$ref` yönünden doğrulanır, ardından proje kuralları uygulanır. `npm test` hem contract kabul/ret senaryolarını hem mock HTTP davranışını sınar. Yeni operasyon aynı kaynağa eklenir; server, client veya mock modelleri elle ikinci bir contract olarak tutulmaz. Generated client (`TBP-23/24`) ve breaking-change CI (`TBP-25`) bu işin dışında; CI bağlama `TBP-19` kapsamındadır.
 
+## Admin Web istemcisi (`TBP-24`)
+
+Typed TypeScript istemcisi kanonik contract'tan, digest ile sabitlenmiş resmi OpenAPI Generator container'ı kullanılarak üretilir:
+
+```powershell
+cd contracts
+npm run generate:admin-web
+cd ../admin-web
+npm test
+npm run typecheck
+```
+
+Üretilen kaynak `admin-web/src/api/uretilen` altında tutulur. Dosyalar elle değiştirilmez; contract değişikliğinden sonra komut yeniden çalıştırılır. `typescript-fetch` generator'ı tarayıcının yerleşik `fetch` API'sini kullandığı için Admin Web'e ek bir runtime paketi eklemez.
+
 ## Wire kuralları
 
 - Domain adları Türkçe anlamlı ASCII, JSON property'leri `camelCase`, route segmentleri `kebab-case`, enum ve kararlı hata kodları `UPPER_SNAKE_CASE` olur. URI kaynak adı çoğuldur; teknik/protokol terimleri özgün yazılır. `operationId` kararlı ve benzersiz `camelCase` olur. Yayınlanmış isim yalnız kozmetik nedenle değiştirilmez.

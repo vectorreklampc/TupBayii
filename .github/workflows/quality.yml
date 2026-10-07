@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
   backend:
@@ -37,6 +38,9 @@ jobs:
         working-directory: contracts
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
@@ -47,6 +51,32 @@ jobs:
         run: npm run validate
       - name: Pozitif ve negatif contract testleri
         run: npm test
+      - name: PR base contract'ini gecici dosyaya cikar
+        if: github.event_name == 'pull_request'
+        id: baseline
+        shell: bash
+        run: |
+          if git cat-file -e "${{ github.event.pull_request.base.sha }}:contracts/openapi.json"; then
+            git show "${{ github.event.pull_request.base.sha }}:contracts/openapi.json" > "$RUNNER_TEMP/openapi-base.json"
+            echo "mevcut=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "mevcut=false" >> "$GITHUB_OUTPUT"
+            echo "Base SHA'da onceki kanonik OpenAPI yok; bu ilk contract yayinidir."
+          fi
+      - name: Breaking OpenAPI degisikligini belirle
+        if: github.event_name == 'pull_request' && steps.baseline.outputs.mevcut == 'true'
+        id: compatibility
+        run: node scripts/kirici-degisiklik-kontrol.mjs "$RUNNER_TEMP/openapi-base.json" openapi.json
+      - name: Pull request review'larini al
+        if: github.event_name == 'pull_request' && steps.compatibility.outputs.kirici == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api --paginate "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/reviews" --slurp > "$RUNNER_TEMP/review-pages.json"
+      - name: Breaking degisiklik onayini dogrula
+        if: github.event_name == 'pull_request' && steps.compatibility.outputs.kirici == 'true'
+        shell: bash
+        run: jq 'add' "$RUNNER_TEMP/review-pages.json" > "$RUNNER_TEMP/reviews.json" && node scripts/kirici-degisiklik-onay.mjs "$RUNNER_TEMP/reviews.json"
       - name: Bağımlılık güvenliği
         run: npm audit --audit-level=high
 
