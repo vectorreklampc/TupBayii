@@ -127,6 +127,10 @@ jobs:
           cache: npm
           cache-dependency-path: admin-web/package-lock.json
       - run: npm ci
+      - name: Admin Web API istemcisini kanonik OpenAPI'den tekrar uret
+        run: node ../contracts/scripts/admin-web-client-uret.mjs
+      - name: Uretilen Admin Web API istemcisinin deterministik oldugunu dogrula
+        run: git diff --exit-code -- src/api/uretilen
       - run: npm run format:check
       - run: npm run lint
       - run: npm run typecheck
