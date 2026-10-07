@@ -10,6 +10,25 @@ permissions:
   pull-requests: read
 
 jobs:
+  factory:
+    name: Factory durum makinesi ve kalicilik testleri
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: factory
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: factory/package-lock.json
+      - run: npm ci
+      - name: Sozdizimi ve statik kontrol
+        run: npm run check
+      - name: Durum makinesi testleri
+        run: npm test
+
   backend:
     name: Backend build, format, unit ve mimari
     runs-on: ubuntu-latest
