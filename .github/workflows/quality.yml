@@ -53,10 +53,18 @@ jobs:
         run: npm test
       - name: PR base contract'ini gecici dosyaya cikar
         if: github.event_name == 'pull_request'
+        id: baseline
         shell: bash
-        run: git show "${{ github.event.pull_request.base.sha }}:contracts/openapi.json" > "$RUNNER_TEMP/openapi-base.json"
+        run: |
+          if git cat-file -e "${{ github.event.pull_request.base.sha }}:contracts/openapi.json"; then
+            git show "${{ github.event.pull_request.base.sha }}:contracts/openapi.json" > "$RUNNER_TEMP/openapi-base.json"
+            echo "mevcut=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "mevcut=false" >> "$GITHUB_OUTPUT"
+            echo "Base SHA'da onceki kanonik OpenAPI yok; bu ilk contract yayinidir."
+          fi
       - name: Breaking OpenAPI degisikligini belirle
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && steps.baseline.outputs.mevcut == 'true'
         id: compatibility
         run: node scripts/kirici-degisiklik-kontrol.mjs "$RUNNER_TEMP/openapi-base.json" openapi.json
       - name: Pull request review'larini al
