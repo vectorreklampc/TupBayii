@@ -35,7 +35,7 @@ Tasks tracked in Jira: [TBP-31](https://ucarmakadil.atlassian.net/browse/TBP-31)
 
 - [x] `npm run check`, `npm test` ve `npm audit --audit-level=high` basarili.
 - [x] Concurrency testi gercek iki ayri SQLite baglantisiyla tek kazanan kaniti verir.
-- [ ] Codex son incelemesi ve GitHub Actions kalite kapilari basarili.
+- [x] Codex son incelemesi ve GitHub Actions kalite kapilari basarili.
 
 ## Risks and Mitigations
 
