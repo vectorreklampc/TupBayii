@@ -66,7 +66,7 @@ jobs:
       - name: Breaking OpenAPI degisikligini belirle
         if: github.event_name == 'pull_request' && steps.baseline.outputs.mevcut == 'true'
         id: compatibility
-        run: node scripts/kirici-degisiklik-kontrol.mjs fixtures/ci-negatif-onceki.json fixtures/ci-negatif-yeni.json
+        run: node scripts/kirici-degisiklik-kontrol.mjs "$RUNNER_TEMP/openapi-base.json" openapi.json
       - name: Pull request review'larini al
         if: github.event_name == 'pull_request' && steps.compatibility.outputs.kirici == 'true'
         shell: bash
