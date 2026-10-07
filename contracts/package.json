@@ -8,6 +8,7 @@
     "test": "node --test"
   },
   "devDependencies": {
-    "@apidevtools/swagger-parser": "13.1.0"
+    "@apidevtools/swagger-parser": "13.1.0",
+    "@oasdiff-js/oasdiff-js": "1.0.0"
   }
 }
