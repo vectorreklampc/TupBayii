@@ -160,6 +160,14 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: contracts/package-lock.json
+      - name: Kanonik mock server bagimliliklarini yukle
+        run: npm ci
+        working-directory: contracts
       - run: flutter pub get --enforce-lockfile
       - name: Flutter API istemcisini kanonik OpenAPI'den tekrar uret
         run: node ../contracts/scripts/flutter-client-uret.mjs
