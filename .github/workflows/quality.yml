@@ -103,12 +103,13 @@ jobs:
       - name: Base branch ile revision uyumluluğu
         if: github.event_name == 'pull_request'
         shell: bash
+        working-directory: .
         run: |
           BASE_SHA="${{ github.event.pull_request.base.sha }}"
           if git cat-file -e "$BASE_SHA:event-contracts/registry.json"; then
             mkdir -p "$RUNNER_TEMP/event-contracts-base"
-            git archive "$BASE_SHA" event-contracts | tar -x -C "$RUNNER_TEMP/event-contracts-base"
-            node scripts/uyumluluk-kontrolu.mjs "$RUNNER_TEMP/event-contracts-base/event-contracts" .
+            git archive "$BASE_SHA" -- event-contracts | tar -x -C "$RUNNER_TEMP/event-contracts-base"
+            node event-contracts/scripts/uyumluluk-kontrolu.mjs "$RUNNER_TEMP/event-contracts-base/event-contracts" event-contracts
           fi
       - name: Bağımlılık güvenliği
         run: npm audit --audit-level=high
