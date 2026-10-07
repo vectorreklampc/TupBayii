@@ -3,3 +3,4 @@
 export * from "./DogrulamaDetayi";
 export * from "./Hata";
 export * from "./Sayfalama";
+export * from "./SistemSaglik";

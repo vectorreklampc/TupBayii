@@ -5,9 +5,59 @@
     "version": "0.1.0",
     "description": "TBP-21 contract temeli. Onayli endpoint'ler kendi Jira islerinde eklenir."
   },
-  "paths": {},
+  "tags": [
+    { "name": "System", "description": "Platform durum operasyonlari." }
+  ],
+  "paths": {
+    "/api/v1/system/health": {
+      "get": {
+        "tags": ["System"],
+        "operationId": "getSystemHealth",
+        "summary": "API platform durumunu getirir",
+        "security": [],
+        "x-anonymous-reason": "Yuk dengeleyici ve istemci baslangic kontrolleri kimliksiz durum bilgisine gereksinim duyar.",
+        "x-collection": false,
+        "responses": {
+          "200": {
+            "description": "API platformu istek kabul edebilir.",
+            "headers": {
+              "TraceId": { "$ref": "#/components/headers/TraceId" }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SistemSaglik" },
+                "example": {
+                  "status": "ok",
+                  "service": "tup-bayi-api",
+                  "apiVersion": "v1",
+                  "timestampUtc": "2026-10-07T00:00:00Z",
+                  "traceId": "trace-example-001"
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/Hata" },
+          "401": { "$ref": "#/components/responses/Hata" },
+          "403": { "$ref": "#/components/responses/Hata" },
+          "500": { "$ref": "#/components/responses/Hata" }
+        }
+      }
+    }
+  },
   "components": {
     "schemas": {
+      "SistemSaglik": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["status", "service", "apiVersion", "timestampUtc", "traceId"],
+        "properties": {
+          "status": { "type": "string", "enum": ["ok"] },
+          "service": { "type": "string", "minLength": 1 },
+          "apiVersion": { "type": "string", "pattern": "^v[0-9]+$" },
+          "timestampUtc": { "type": "string", "format": "date-time" },
+          "traceId": { "type": "string", "minLength": 1 }
+        }
+      },
       "Hata": {
         "type": "object",
         "additionalProperties": false,
@@ -43,7 +93,8 @@
     "headers": {
       "TraceId": {
         "description": "Istek ile iliskili guvenli iz kimligi; hata govdesindeki traceId ile aynidir.",
-        "schema": { "type": "string" }
+        "schema": { "type": "string" },
+        "example": "trace-example-001"
       }
     },
     "responses": {

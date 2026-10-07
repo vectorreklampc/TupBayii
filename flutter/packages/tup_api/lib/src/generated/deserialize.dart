@@ -1,6 +1,7 @@
 import 'package:tup_api/src/generated/model/dogrulama_detayi.dart';
 import 'package:tup_api/src/generated/model/hata.dart';
 import 'package:tup_api/src/generated/model/sayfalama.dart';
+import 'package:tup_api/src/generated/model/sistem_saglik.dart';
 
 final _regList = RegExp(r'^List<(.*)>$');
 final _regSet = RegExp(r'^Set<(.*)>$');
@@ -31,6 +32,8 @@ ReturnType deserialize<ReturnType, BaseType>(
       return Hata.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'Sayfalama':
       return Sayfalama.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'SistemSaglik':
+      return SistemSaglik.fromJson(value as Map<String, dynamic>) as ReturnType;
     default:
       RegExpMatch? match;
 

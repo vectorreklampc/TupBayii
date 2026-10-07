@@ -42,6 +42,6 @@ if (process.platform !== 'win32' && process.getuid) {
 
 calistir('docker', dockerArgumanlari, depoKoku);
 await rm(generatorMetadataDizini, { recursive: true, force: true });
-dartCalistir(['pub', 'get'], flutterKoku);
+dartCalistir(['pub', 'get', '--enforce-lockfile'], flutterKoku);
 dartCalistir(['run', 'build_runner', 'build'], paketDizini);
 dartCalistir(['format', 'lib'], paketDizini);

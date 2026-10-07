@@ -6,5 +6,7 @@ include: package:lints/recommended.yaml
 analyzer:
   errors:
     # OpenAPI Generator 7.17.0 tarafindan uretilen transport kodu.
+    no_leading_underscores_for_local_identifiers: ignore
     unnecessary_brace_in_string_interps: ignore
     unnecessary_this: ignore
+    unused_import: ignore

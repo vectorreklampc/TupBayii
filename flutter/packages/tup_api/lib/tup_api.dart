@@ -8,6 +8,9 @@ export 'package:tup_api/src/generated/auth/basic_auth.dart';
 export 'package:tup_api/src/generated/auth/bearer_auth.dart';
 export 'package:tup_api/src/generated/auth/oauth.dart';
 
+export 'package:tup_api/src/generated/api/system_api.dart';
+
 export 'package:tup_api/src/generated/model/dogrulama_detayi.dart';
 export 'package:tup_api/src/generated/model/hata.dart';
 export 'package:tup_api/src/generated/model/sayfalama.dart';
+export 'package:tup_api/src/generated/model/sistem_saglik.dart';
