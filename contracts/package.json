@@ -4,10 +4,13 @@
   "type": "module",
   "scripts": {
     "generate:admin-web": "node scripts/admin-web-client-uret.mjs",
+    "generate:flutter": "node scripts/flutter-client-uret.mjs",
+    "mock": "node scripts/mock-server.mjs",
     "validate": "node scripts/dogrula.mjs",
     "test": "node --test"
   },
   "devDependencies": {
-    "@apidevtools/swagger-parser": "13.1.0"
+    "@apidevtools/swagger-parser": "13.1.0",
+    "@oasdiff-js/oasdiff-js": "1.0.0"
   }
 }
