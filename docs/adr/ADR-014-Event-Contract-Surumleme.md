@@ -2,7 +2,7 @@
 
 ## Durum
 
-Önerildi
+Kabul Edildi
 
 ## Tarih
 
@@ -19,7 +19,14 @@
 
 ## Karar
 
-Yayımlanan event contract'ları açık kimlik ve sürüm taşır; schema değişiklikleri kayıtlı compatibility kuralına tabidir. Tüketici, bilinmeyen veya uyumsuz sürümü sessizce işleyemez. Kesin sürüm biçimi ve compatibility matrisi `TBP-26` ile belirlenecektir.
+Yayımlanan event contract'ları açık kimlik ve sürüm taşır; schema değişiklikleri kayıtlı compatibility kuralına tabidir. Tüketici, bilinmeyen veya uyumsuz sürümü sessizce işleyemez.
+
+- Olay adı revision eki taşımaz; örneğin `SaleCompleted.v1` yasaktır.
+- Revision pozitif ve ardışık `SchemaRevision` metadata'sıyla tutulur.
+- Yayımlanmış `<olay adı, SchemaRevision>` çifti değiştirilemez veya silinemez.
+- Payload değişikliği eski revision korunarak yeni `SchemaRevision` girdisiyle yayımlanır.
+- Aynı revision altındaki schema değişikliği CI compatibility kontrolünde reddedilir.
+- Başlangıç payload sözleşmesi yalnız ortak message/correlation/causation, kaynak kimliği/version'ı ve UTC oluşma zamanı metadata'sını tanımlar. Olaylara özel business alanları ilgili Jira sözleşmesi olmadan eklenmez.
 
 ## Değiştirilemez Sınırlar
 
@@ -34,8 +41,8 @@ Yayımlanan event contract'ları açık kimlik ve sürüm taşır; schema deği�
 
 ## Sonuçlar
 
-Registry, compatibility kontrolü ve tüketici hata politikası gerekir; ayrıntılar henüz sabitlenmemiştir.
+Kanonik registry `event-contracts/registry.json` altında tutulur. JSON Schema doğrulaması ve base branch karşılaştırması CI kalite kapısının parçasıdır. Yeni revision tüketici migration'ını otomatik çözmez; tüketici bilinmeyen revision'ı sessizce işleyemez.
 
 ## Doğrulama
 
-`TBP-26` kabulü ve eski/yeni üretici-tüketici compatibility testleri gerekir.
+`event-contracts` doğrulama testleri her başlangıç olayı için geçerli/geçersiz payload'ı ve aynı revision altındaki değişiklik reddini kanıtlar.

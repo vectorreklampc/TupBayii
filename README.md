@@ -12,6 +12,7 @@ TupBayiProje, tüp bayilerinin merkez ve saha operasyonlarını aynı ürün alt
 | `infrastructure/` | Yerel ve uzak ortam altyapısı | `TBP-18` ve sonraki altyapı işleri |
 | `factory/` | Otonom yazılım fabrikası | P02 Jira işleri |
 | `contracts/` | Kanonik OpenAPI belgesi ve contract doğrulaması | `TBP-21` |
+| `event-contracts/` | Versiyonlu olay sözleşmesi kayıt defteri | `TBP-26` |
 | `docs/` | Teknik belgeler ve ADR kayıtları | P00 ve ilgili Jira işleri |
 
 Kökteki `TupBayiProje_*.md` belgeleri P00 kapsamında oluşturulan normatif standartlardır. İş gereksinimleri, sıralama ve uygunluk için canlı Jira `TBP` projesi Source of Truth'tur.

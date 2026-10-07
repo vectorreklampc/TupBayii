@@ -36,8 +36,27 @@ function listeBelgesi() {
   return belge;
 }
 
-test('kanonik bos endpoint belgesi gercek ortak semalari dogrular', async () => {
+test('kanonik endpoint belgesi gercek ortak semalari dogrular', async () => {
   assert.equal(await contractDogrula(kopyala()), true);
+});
+
+test('kanonik sistem saglik operasyonunu ve deterministik ornegini tanimlar', async () => {
+  const belge = kopyala();
+  const islem = belge.paths['/api/v1/system/health']?.get;
+  const basari = islem?.responses?.['200'];
+  const ornek = basari?.content?.['application/json']?.example;
+
+  assert.equal(islem?.operationId, 'getSystemHealth');
+  assert.deepEqual(islem?.security, []);
+  assert.equal(islem?.['x-collection'], false);
+  assert.ok(islem?.['x-anonymous-reason']);
+  assert.equal(basari?.headers?.TraceId?.$ref, '#/components/headers/TraceId');
+  assert.equal(basari?.content?.['application/json']?.schema?.$ref, '#/components/schemas/SistemSaglik');
+  assert.deepEqual(Object.keys(ornek ?? {}).sort(),
+    ['apiVersion', 'service', 'status', 'timestampUtc', 'traceId'].sort());
+  assert.equal(ornek?.status, 'ok');
+  assert.equal(ornek?.traceId, belge.components.headers.TraceId.example);
+  assert.equal(await contractDogrula(belge), true);
 });
 
 test('kimlikli sayfali operasyon contract kurallarini gecer', async () => {

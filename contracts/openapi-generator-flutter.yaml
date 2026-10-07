@@ -1,0 +1,18 @@
+generatorName: dart-dio
+inputSpec: /local/contracts/openapi.json
+outputDir: /local/flutter/packages/tup_api
+globalProperties:
+  apiDocs: false
+  apiTests: false
+  modelDocs: false
+  modelTests: false
+additionalProperties:
+  pubName: tup_api
+  pubVersion: 0.1.0
+  pubDescription: TupBayiProje OpenAPI generated client
+  pubPublishTo: none
+  serializationLibrary: json_serializable
+  sourceFolder: src/generated
+  skipCopyWith: true
+  disallowAdditionalPropertiesIfNotPresent: false
+  enumUnknownDefaultCase: true
