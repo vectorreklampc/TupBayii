@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "generate:flutter": "node scripts/flutter-client-uret.mjs",
+    "mock": "node scripts/mock-server.mjs",
     "validate": "node scripts/dogrula.mjs",
     "test": "node --test"
   },
