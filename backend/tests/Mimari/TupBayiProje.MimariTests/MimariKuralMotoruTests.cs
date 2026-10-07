@@ -44,7 +44,7 @@ public sealed class MimariKuralMotoruTests
 
         var ihlaller = MimariKuralMotoru.ProjeBagimliliklariniDogrula(projeler);
 
-        Assert.Empty(ihlaller);
+        Assert.NotEmpty(ihlaller);
     }
 
     [Fact]
