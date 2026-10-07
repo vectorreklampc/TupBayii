@@ -93,8 +93,14 @@ jobs:
           distribution: temurin
           java-version: "17"
       - run: flutter pub get --enforce-lockfile
+      - name: Flutter API istemcisini kanonik OpenAPI'den tekrar uret
+        run: node ../contracts/scripts/flutter-client-uret.mjs
+      - name: Uretilen Flutter API istemcisinin deterministik oldugunu dogrula
+        working-directory: .
+        run: git diff --exit-code -- flutter/packages/tup_api flutter/pubspec.lock
       - run: dart format --output=none --set-exit-if-changed apps packages
       - run: flutter analyze
+      - run: flutter test packages/tup_api
       - run: flutter test apps/tup_mobile
       - run: flutter test apps/tup_desktop
       - name: Android debug build
