@@ -7,9 +7,12 @@ cd contracts
 npm ci
 npm run validate
 npm test
+npm run mock
 ```
 
-OpenAPI 3.1 belgesi önce Swagger Parser ile yapısal ve `$ref` yönünden doğrulanır, ardından proje kuralları uygulanır. `npm test` hem kabul hem ret senaryolarını sınar. Yeni operasyon aynı kaynağa eklenir; server ve client modelleri elle ikinci bir contract olarak tutulmaz. Mock (`TBP-22`), generated client (`TBP-23/24`) ve breaking-change CI (`TBP-25`) bu işin dışında; CI bağlama `TBP-19` kapsamındadır.
+`npm run mock`, aynı `openapi.json` kaynağından `http://localhost:4010` adresinde deterministik örnek yanıtlar üretir. Böylece Flutter ve Admin Web, backend implementasyonunu beklemeden onaylı contract operasyonlarını kullanabilir. Tarayıcı istemcileri için CORS açıktır; `MOCK_HOST`, `MOCK_PORT` ve test amaçlı `MOCK_CONTRACT` ortam değişkenleriyle dinleme adresi veya kaynak değiştirilebilir. Contract boşken sunucu yine başlar ve eşleşmeyen istekleri `404 MOCK_OPERATION_NOT_FOUND` ile reddeder; Jira ile onaylanmamış endpoint üretmez.
+
+OpenAPI 3.1 belgesi önce Swagger Parser ile yapısal ve `$ref` yönünden doğrulanır, ardından proje kuralları uygulanır. `npm test` hem contract kabul/ret senaryolarını hem mock HTTP davranışını sınar. Yeni operasyon aynı kaynağa eklenir; server, client veya mock modelleri elle ikinci bir contract olarak tutulmaz. Generated client (`TBP-23/24`) ve breaking-change CI (`TBP-25`) bu işin dışında; CI bağlama `TBP-19` kapsamındadır.
 
 ## Wire kuralları
 

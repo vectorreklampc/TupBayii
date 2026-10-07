@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "mock": "node scripts/mock-server.mjs",
     "validate": "node scripts/dogrula.mjs",
     "test": "node --test"
   },
