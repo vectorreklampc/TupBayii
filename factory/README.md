@@ -98,3 +98,22 @@ alan veya kanit yolunu tasir.
 `N/A` yalniz `N/A - <somut gerekce>` biciminde kabul edilir. Tasarim gerekli
 ise Figma URL kaniti, Human Gate gerekli ise onay kaniti zorunludur. Hazir ve
 gerekmez etiketlerinin birlikte bulunmasi fail-closed reddedilir.
+
+## TBP-33 Architecture Guardian
+
+`src/mimari-koruyucu.mjs`, normalize edilmis mimari inceleme snapshot'ini ag
+cagrisi yapmadan degerlendirir. Asagidaki global invariantlari kanonik sirada
+korur:
+
+- `INV-TEN-001`: Database-per-Tenant.
+- `INV-TEN-002`: Master DB yalniz control-plane verisi tutar.
+- `INV-TEN-003`: Tenant context server-side cozulur; client `TenantId`
+  authoritative degildir.
+- `INV-STK-001`: Fiziksel stok yalniz movement ledger ile degisir.
+- `INV-PAY-001`: Odeme authority dogrulanmis webhook ve Master DB state'idir.
+- `INV-CODE-001`: Domain kodu Turkce anlamli ASCII adlandirma kullanir.
+
+Her invariant kaydi `durum: UYGUN | IHLAL` ve en az bir metin `kanitlar`
+degeri tasir. Bilinmeyen durum, eksik/bozuk kanit veya eksik girdi fail-closed
+`BLOCKED` olur. Butun kayitlar kanitli `UYGUN` ise sonuc `ACCEPTED` olur.
+`invariantKodlari` ve `bulgular`, ihlalleri yukaridaki kararlı sirada raporlar.
