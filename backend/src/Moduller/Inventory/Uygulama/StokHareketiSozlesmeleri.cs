@@ -1,4 +1,5 @@
 using TupBayiProje.Moduller.Inventory.Domain;
+using TupBayiProje.Moduller.Inventory.Sozlesmeler;
 
 namespace TupBayiProje.Moduller.Inventory.Uygulama;
 
@@ -63,4 +64,38 @@ public interface IStokHareketiDeposu
         string idempotencyAnahtari,
         StokHareketi hareket,
         CancellationToken cancellationToken = default);
+}
+
+public static class StokHareketiKomutCozumleyici
+{
+    public static StokHareketiKaydetKomutu Coz(StokHareketiKaydetIstegi istek)
+    {
+        ArgumentNullException.ThrowIfNull(istek);
+
+        return new StokHareketiKaydetKomutu(
+            istek.HareketKimligi,
+            istek.IdempotencyAnahtari,
+            istek.UrunKimligi,
+            TupDurumunuCoz(istek.TupDurumu),
+            LokasyonTurunuCoz(istek.KaynakTuru),
+            istek.KaynakKimligi,
+            LokasyonTurunuCoz(istek.HedefTuru),
+            istek.HedefKimligi,
+            istek.Miktar);
+    }
+
+    private static TupDurumu TupDurumunuCoz(string deger) => deger switch
+    {
+        "FULL" => TupDurumu.Dolu,
+        "EMPTY" => TupDurumu.Bos,
+        _ => (TupDurumu)(-1),
+    };
+
+    private static StokLokasyonTuru LokasyonTurunuCoz(string deger) => deger switch
+    {
+        "WAREHOUSE" => StokLokasyonTuru.Depo,
+        "VEHICLE" => StokLokasyonTuru.Arac,
+        "CUSTOMER" => StokLokasyonTuru.Musteri,
+        _ => (StokLokasyonTuru)(-1),
+    };
 }

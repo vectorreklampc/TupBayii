@@ -1,5 +1,4 @@
 using TupBayiProje.Gozlemlenebilirlik;
-using TupBayiProje.Moduller.Inventory.Domain;
 using TupBayiProje.Moduller.Inventory.Sozlesmeler;
 using TupBayiProje.Moduller.Inventory.Uygulama;
 
@@ -16,16 +15,7 @@ public sealed class StokHareketiApi(StokHareketiKaydedici kaydedici)
         ArgumentNullException.ThrowIfNull(istek);
 
         var sonuc = await kaydedici.KaydetAsync(
-            new StokHareketiKaydetKomutu(
-                istek.HareketKimligi,
-                istek.IdempotencyAnahtari,
-                istek.UrunKimligi,
-                TupDurumunuCoz(istek.TupDurumu),
-                LokasyonTurunuCoz(istek.KaynakTuru),
-                istek.KaynakKimligi,
-                LokasyonTurunuCoz(istek.HedefTuru),
-                istek.HedefKimligi,
-                istek.Miktar),
+            StokHareketiKomutCozumleyici.Coz(istek),
             baglam,
             izBaglami,
             cancellationToken);
@@ -36,19 +26,4 @@ public sealed class StokHareketiApi(StokHareketiKaydedici kaydedici)
             sonuc.HareketKimligi,
             sonuc.HataKodu);
     }
-
-    private static TupDurumu TupDurumunuCoz(string deger) => deger switch
-    {
-        "FULL" => TupDurumu.Dolu,
-        "EMPTY" => TupDurumu.Bos,
-        _ => (TupDurumu)(-1),
-    };
-
-    private static StokLokasyonTuru LokasyonTurunuCoz(string deger) => deger switch
-    {
-        "WAREHOUSE" => StokLokasyonTuru.Depo,
-        "VEHICLE" => StokLokasyonTuru.Arac,
-        "CUSTOMER" => StokLokasyonTuru.Musteri,
-        _ => (StokLokasyonTuru)(-1),
-    };
 }
