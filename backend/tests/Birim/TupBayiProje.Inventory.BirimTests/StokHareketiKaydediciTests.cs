@@ -18,7 +18,7 @@ public sealed class StokHareketiKaydediciTests
         var sonuc = await kaydedici.KaydetAsync(
             GecerliKomut(),
             baglam,
-            IzBaglami.Olustur("trace-1", "corr-1"));
+            IzBaglami.DisSinirOlustur("trace-1", "span-1", "corr-1", "cause-1"));
 
         Assert.True(sonuc.Basarili);
         Assert.False(sonuc.Tekrar);
@@ -29,7 +29,9 @@ public sealed class StokHareketiKaydediciTests
             kayit.OlayAdi == "stok_hareketi_kaydetme" &&
             kayit.SonucKodu == "STOK_HAREKETI_KAYDEDILDI" &&
             kayit.TenantKimligi == "tenant-1" &&
-            kayit.KorelasyonKimligi == "corr-1");
+            kayit.KorelasyonKimligi == "corr-1" &&
+            kayit.SpanKimligi == "span-1" &&
+            kayit.NedenKimligi == "cause-1");
     }
 
     [Fact]

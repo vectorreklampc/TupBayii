@@ -6,7 +6,9 @@ public sealed record AuditKaydi(
     string? TenantKimligi,
     DateTimeOffset OlusturulmaZamani,
     string TraceKimligi,
+    string SpanKimligi,
     string KorelasyonKimligi,
+    string? NedenKimligi,
     string SonucKodu);
 
 public interface IAuditKaydiYazici

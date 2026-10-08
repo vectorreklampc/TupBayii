@@ -17,6 +17,7 @@
     <Project Path="src/Sunum/TupBayiProje.Api/TupBayiProje.Api.csproj" />
   </Folder>
   <Folder Name="/tests/Birim/">
+    <Project Path="tests/Birim/TupBayiProje.Gozlemlenebilirlik.BirimTests/TupBayiProje.Gozlemlenebilirlik.BirimTests.csproj" />
     <Project Path="tests/Birim/TupBayiProje.Inventory.BirimTests/TupBayiProje.Inventory.BirimTests.csproj" />
     <Project Path="tests/Birim/TupBayiProje.Tenancy.BirimTests/TupBayiProje.Tenancy.BirimTests.csproj" />
   </Folder>

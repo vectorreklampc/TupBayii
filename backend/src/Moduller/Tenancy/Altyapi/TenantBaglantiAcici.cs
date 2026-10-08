@@ -100,7 +100,9 @@ public sealed class TenantBaglantiAcici(
                 baglam.TenantKimligi,
                 zamanSaglayici.GetUtcNow(),
                 izBaglami.TraceKimligi,
+                izBaglami.SpanKimligi,
                 izBaglami.KorelasyonKimligi,
+                izBaglami.NedenKimligi,
                 sonucKodu),
             cancellationToken);
 

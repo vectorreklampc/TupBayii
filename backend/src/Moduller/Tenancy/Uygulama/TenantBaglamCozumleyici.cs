@@ -70,7 +70,9 @@ public sealed class TenantBaglamCozumleyici(
                 tenantKimligi,
                 zamanSaglayici.GetUtcNow(),
                 izBaglami.TraceKimligi,
+                izBaglami.SpanKimligi,
                 izBaglami.KorelasyonKimligi,
+                izBaglami.NedenKimligi,
                 sonucKodu),
             cancellationToken);
 }
