@@ -197,3 +197,40 @@ doluncaya kadar reddedilir. Fonksiyon saat ya da kalici state okumaz. Politika
 ile `pencereYasiMs` ve `oncekiIstekSayisi` girdileri ayniysa karar da aynidir.
 Dagitik sayacin atomikligi ve depolamasi adapter sorumlulugudur; API katmani
 bu saf karari authoritative sayac state'i ile uygular.
+
+## TBP-237 kabul testi catisi ve kalite piramidi
+
+`src/kabul-testi-catisi.mjs`, Gherkin veya structured kabul kriterlerini
+deterministik bir test planina derler. Her kriter bir `AC-*` kimligi, risk
+seviyesi, en az bir `REQ-*`, `BR-*`, `INV-*`, `AC-*` veya `GS-*` kaynak
+kimligi ve en az bir benzersiz `TEST-*` kimligi tasir. Derleyici bu kaynaklari
+testlere baglayan izlenebilirlik matrisini uretir; kriter icinden gelen Test
+Oracle degisikligini fail-closed reddeder.
+
+Kalite piramidi hizli geri bildirim, sinir/altyapi ve sistem/release
+katmanlarinda Jira'nin tanimladigi 15 test turunu kapsar. Piramit yuzde
+coverage hedefi koymaz; hangi risk ve davranis kaynaginin hangi calistirilabilir
+testle kapsandigini esas alir.
+
+```js
+import {
+  kabulTestPlaniOlustur,
+  kaliteKapisiniDegerlendir,
+} from "./src/kabul-testi-catisi.mjs";
+
+const plan = kabulTestPlaniOlustur({
+  testOracle: {
+    kimlik: "ORACLE-SATIS-001",
+    surum: "1",
+    ozet: "Satis tamamlama authoritative beklenen sonuclari",
+  },
+  kabulKriterleri,
+});
+
+const kapi = kaliteKapisiniDegerlendir({ plan, testSonuclari });
+```
+
+Eksik, bilinmeyen, tekrarli veya basarisiz test sonucu issue tamamlamayi
+engeller. Flaky test yalniz kritik degilse, somut gerekce ve bir `TBP-*` takip
+isiyle karantinaya alinabilir. Kritik test karantinasi her durumda engellenir;
+kritik gate bypass edilemez.
