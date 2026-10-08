@@ -1,0 +1,8 @@
+{
+  "messageId": "msg-collection-001",
+  "correlationId": "corr-001",
+  "causationId": "cmd-collection-001",
+  "kaynakId": "collection-001",
+  "kaynakVersion": 1,
+  "olustuguZamanUtc": "2026-10-06T12:00:00Z"
+}

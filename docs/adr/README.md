@@ -59,6 +59,6 @@ Her ADR; durum, tarih, Jira kaynağı, bağlam, karar, değiştirilemez sınırl
 | ADR-011 | Figma tasarım kaynağı | Önerildi |
 | ADR-012 | Jira gereksinim kaynağı | Kabul Edildi |
 | ADR-013 | OpenAPI contract kaynağı | Önerildi |
-| ADR-014 | Event contract sürümleme | Önerildi |
+| ADR-014 | Event contract sürümleme | Kabul Edildi |
 | ADR-015 | Tenant bağlantı yaşam döngüsü | Kabul Edildi |
 | ADR-016 | Tenant migration orkestrasyonu | Kabul Edildi |

@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tupbayiproje.local/event-contracts/collection-posted/revision-1",
+  "title": "CollectionPosted",
+  "x-schema-revision": 1,
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "messageId",
+    "correlationId",
+    "causationId",
+    "kaynakId",
+    "kaynakVersion",
+    "olustuguZamanUtc"
+  ],
+  "properties": {
+    "messageId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "correlationId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "causationId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "kaynakId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "kaynakVersion": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "olustuguZamanUtc": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

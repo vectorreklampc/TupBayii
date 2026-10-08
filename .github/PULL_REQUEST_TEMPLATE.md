@@ -34,3 +34,11 @@
 
 - Özellikle incelenmesi gereken noktalar:
 - Açık risk veya takip işi:
+
+## API Breaking Change Etkisi
+
+Breaking OpenAPI değişikliği yoksa `N/A`; varsa etkilenen istemcileri ve davranışları yazın.
+
+## Gecis Plani
+
+Breaking OpenAPI değişikliği yoksa `N/A`; varsa uyumluluk, sürümleme ve istemci geçiş planını yazın.

@@ -1,0 +1,10 @@
+# Paket metadata'si elle sahiplenilir; generator yalniz Dart client kaynagini yazar.
+.gitignore
+.openapi-generator/**
+.openapi-generator-ignore
+analysis_options.yaml
+build.yaml
+doc/**
+pubspec.yaml
+README.md
+test/**
