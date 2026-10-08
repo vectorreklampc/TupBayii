@@ -31,7 +31,7 @@ Bu kayıt defteri kritik verilerin authoritative kaynağını, sahibi olan domai
 
 ### Control-plane sınırı
 
-Master DB yalnızca yukarıdaki control-plane verilerini tutar. Müşteri, ürün, fiyat, satış, sipariş, stok, cari ve teslimat gibi tenant operasyon verileri Master DB'ye yazılamaz.
+Master DB yalnızca yukarıdaki control-plane verilerini ve `SOT-AUD-001` kapsamındaki control-plane audit kaydını tutar (karar: TBP-58 yorum 10867). Müşteri, ürün, fiyat, satış, sipariş, stok, cari ve teslimat gibi tenant operasyon verileri Master DB'ye yazılamaz.
 
 ## 3. Tenant operasyon kayıtları
 
@@ -67,7 +67,7 @@ Master DB yalnızca yukarıdaki control-plane verilerini tutar. Müşteri, ürü
 | Kayıt | Sahip domain | Authoritative veri | Fiziksel kaynak | Tek yazma yetkisi | Diğer domainlerin erişimi |
 |---|---|---|---|---|---|
 | `SOT-SYN-001` | Sync | Offline command envelope, cihaz sırası, pending ve conflict state | Tenant DB ve istemci local store | Sync | Server doğrulama ve domain command dispatch contract'ı |
-| `SOT-AUD-001` | Audit | Değiştirilemez audit kaydı ve correlation bilgisi | İlgili güvenli audit store | Audit pipeline | Salt-okunur audit query; business state olarak kullanılamaz |
+| `SOT-AUD-001` | Audit | Değiştirilemez audit kaydı ve correlation bilgisi | Control-plane audit: Master DB (yalnız eklenebilir, maskelenmiş, tenant iş payload'ı yok); diğer audit: ilgili güvenli audit store (TBP-202) | Audit pipeline | Salt-okunur audit query; business state olarak kullanılamaz |
 | `SOT-OBS-001` | Observability | Trace, metric, health ve maskelenmiş structured log | Telemetry store | Observability pipeline | Operasyonel sorgu; business state olarak kullanılamaz |
 | `SOT-REP-001` | Reporting | Yeniden üretilebilir dashboard ve rapor projection'ları | Tenant DB/report store | Reporting | Sahip domainlerin event/query contract'larından beslenir |
 | `SOT-NOT-001` | Notifications | Notification delivery state ve kullanıcı aksiyon durumu | Tenant DB | Notifications | Sahip domain event'lerini tüketir; kaynak domain state'ini değiştiremez |
