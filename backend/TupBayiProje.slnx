@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/src/Moduller/Inventory/">
+    <Project Path="src/Moduller/Inventory/Domain/TupBayiProje.Moduller.Inventory.Domain.csproj" />
+  </Folder>
   <Folder Name="/src/Moduller/Tenancy/">
     <Project Path="src/Moduller/Tenancy/Altyapi/TupBayiProje.Moduller.Tenancy.Altyapi.csproj" />
     <Project Path="src/Moduller/Tenancy/Uygulama/TupBayiProje.Moduller.Tenancy.Uygulama.csproj" />
@@ -10,6 +13,7 @@
     <Project Path="src/Sunum/TupBayiProje.Api/TupBayiProje.Api.csproj" />
   </Folder>
   <Folder Name="/tests/Birim/">
+    <Project Path="tests/Birim/TupBayiProje.Inventory.BirimTests/TupBayiProje.Inventory.BirimTests.csproj" />
     <Project Path="tests/Birim/TupBayiProje.Tenancy.BirimTests/TupBayiProje.Tenancy.BirimTests.csproj" />
   </Folder>
   <Folder Name="/tests/Mimari/">
