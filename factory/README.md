@@ -117,3 +117,33 @@ Her invariant kaydi `durum: UYGUN | IHLAL` ve en az bir metin `kanitlar`
 degeri tasir. Bilinmeyen durum, eksik/bozuk kanit veya eksik girdi fail-closed
 `BLOCKED` olur. Butun kayitlar kanitli `UYGUN` ise sonuc `ACCEPTED` olur.
 `invariantKodlari` ve `bulgular`, ihlalleri yukaridaki kararlı sirada raporlar.
+
+## TBP-34 risk degerlendirme motoru
+
+`src/risk-degerlendirme-motoru.mjs`, normalize edilmis Jira basligi,
+aciklamasi ve etiketlerini saf ve deterministik olarak degerlendirir:
+
+```js
+import { riskiDegerlendir } from "./src/risk-degerlendirme-motoru.mjs";
+
+const sonuc = riskiDegerlendir({
+  baslik: "Idempotency korumasi",
+  aciklama: "Duplicate komut etkisini engelle.",
+  etiketler: ["idempotency"],
+});
+```
+
+Sonuc her zaman `riskSeviyesi`, kararli siradaki `nedenKodlari`,
+`codexOnIncelemeGerekliMi` ve `insanKapisiGerekliMi` alanlarini tasir.
+HIGH ve CRITICAL sonucunda Codex on incelemesi; CRITICAL sonucunda Human Gate
+zorunludur.
+
+Kritik bir terimin metinde gecmesi tek basina riski yukseltmez. Metin tabanli
+eslesme degisiklik niyeti ve issue semantigini birlikte arar; `docs-only` veya
+`style-only` baglami yalniz metin eslesmesini LOW seviyesinde tutar. Kritik
+alan etiketi varsa bu acik sinyal goz ardi edilmez. Birden cok kural eslesirse
+yalniz en yuksek seviyenin nedenleri kanonik kural sirasinda dondurulur.
+
+Bos girdi LOW kabul edilmez ve `RISK_BELIRSIZ` ile MEDIUM olur. Jira
+sinirindaki bozuk alan tipleri `RISK_GIRDISI_GECERSIZ` ile MEDIUM olur; motor
+gecerli parcalari kullanarak sessizce risk karari vermez.
