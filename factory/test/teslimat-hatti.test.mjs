@@ -475,9 +475,9 @@ describe("TBP-238 kontrollu teslimat hatti", () => {
       sahipSid: "S-1-5-32-544",
       korumaliMi: true,
       kurallar: [
-        { sid: "S-1-5-18", tur: "Allow", haklar: 2_032_127 },
-        { sid: "S-1-5-32-544", tur: "Allow", haklar: 2_032_127 },
-        { sid: "S-1-5-32-545", tur: "Allow", haklar: 131_241 },
+        { sid: "S-1-5-18", tur: "Allow", haklar: 2_032_127, kalitsalMi: false },
+        { sid: "S-1-5-32-544", tur: "Allow", haklar: 2_032_127, kalitsalMi: false },
+        { sid: "S-1-5-32-545", tur: "Allow", haklar: 131_241, kalitsalMi: false },
       ],
     };
 
@@ -486,8 +486,23 @@ describe("TBP-238 kontrollu teslimat hatti", () => {
       ...guvenliAcl,
       kurallar: [
         ...guvenliAcl.kurallar,
-        { sid: "S-1-5-32-545", tur: "Allow", haklar: 2 },
+        { sid: "S-1-5-32-545", tur: "Allow", haklar: 2, kalitsalMi: false },
       ],
+    }), false);
+    for (const genericHak of [0x10000000, 0x40000000]) {
+      assert.equal(windowsAclGuvenliMi({
+        ...guvenliAcl,
+        kurallar: [
+          ...guvenliAcl.kurallar,
+          { sid: "S-1-5-32-545", tur: "Allow", haklar: genericHak, kalitsalMi: false },
+        ],
+      }), false);
+    }
+    assert.equal(windowsAclGuvenliMi({
+      ...guvenliAcl,
+      kurallar: guvenliAcl.kurallar.map((kural, index) => (
+        index === 2 ? { ...kural, kalitsalMi: true } : kural
+      )),
     }), false);
     assert.equal(windowsAclGuvenliMi({ ...guvenliAcl, korumaliMi: false }), false);
     assert.equal(windowsAclGuvenliMi({ ...guvenliAcl, sahipSid: "S-1-5-32-545" }), false);

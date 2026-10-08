@@ -10,7 +10,7 @@ const GUVENILIR_WINDOWS_SIDLERI = new Set([
   "S-1-5-32-544",
   "S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464",
 ]);
-const WINDOWS_YAZMA_HAKLARI = 2 | 4 | 16 | 64 | 256 | 65_536 | 262_144 | 524_288;
+const WINDOWS_SALT_OKUMA_HAKLARI = 1 | 8 | 32 | 128 | 131_072 | 1_048_576;
 
 export function onayTrustStoreOku() {
   const dizinYolu = dirname(TRUST_STORE_YOLU);
@@ -39,12 +39,13 @@ export function windowsAclGuvenliMi(acl) {
     if (!kural || typeof kural !== "object"
         || typeof kural.sid !== "string"
         || !Number.isSafeInteger(kural.haklar)
-        || !new Set(["Allow", "Deny"]).has(kural.tur)) {
+        || !new Set(["Allow", "Deny"]).has(kural.tur)
+        || kural.kalitsalMi !== false) {
       return false;
     }
     return kural.tur !== "Allow"
-      || (kural.haklar & WINDOWS_YAZMA_HAKLARI) === 0
-      || GUVENILIR_WINDOWS_SIDLERI.has(kural.sid);
+      || GUVENILIR_WINDOWS_SIDLERI.has(kural.sid)
+      || (kural.haklar & ~WINDOWS_SALT_OKUMA_HAKLARI) === 0;
   });
 }
 
@@ -58,6 +59,7 @@ function windowsYoluDogrula(yol) {
         sid = $_.IdentityReference.Translate([System.Security.Principal.SecurityIdentifier]).Value
         tur = $_.AccessControlType.ToString()
         haklar = [int]$_.FileSystemRights
+        kalitsalMi = [bool]$_.IsInherited
       }
     })
     [pscustomobject]@{
