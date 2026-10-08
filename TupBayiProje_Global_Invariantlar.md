@@ -6,6 +6,28 @@
 
 Bu belge, TupBayiProje için uygulama ayrıntılarından bağımsız ve değiştirilemez sistem ilkelerini tanımlar. Kod, yapılandırma, veri modeli ve operasyon süreçleri bu kurallara uymak zorundadır. Çelişki halinde Jira gereksinimleri ve bu belgede kayıtlı invariantlar uygulanır.
 
+## Yürütülebilir kayıt defteri
+
+Bu belge invariant tanımının insan-okunur normatif kaynağıdır.
+[`factory/invariants/kayit-defteri.json`](factory/invariants/kayit-defteri.json)
+aynı kimlikler için yürütülebilir metadata companion'ıdır. Her kayıt; kimlik,
+sınıf, tanım, gerekçe, kaynak requirement/ADR, ihlal örneği, doğrulama yöntemi,
+test kimliği, önem, remediation ve Human Gate kararını taşır.
+
+`factory/src/invariant-kapisi.mjs` kanıtları fail-closed değerlendirir:
+
+- bütün kayıtlar açık `KANITLANDI` kanıtı taşıyorsa `ACCEPTED`,
+- bir ihlal varsa invariant kimliğiyle `BLOCKED`,
+- kanıt eksik veya bilinmiyorsa `BLOCKED`,
+- kanıt kayıtlı `testKimligi` ile eşleşmiyorsa `BLOCKED`,
+- `CRITICAL` kaydın yetkili Human Gate kanıtı yoksa `BLOCKED`,
+- kayıt defteri şeması ya da kimlik eşleşmesi bozuksa `BLOCKED`.
+
+Kanonik 26 kimlik manifesti, yürütülebilir kurallar ve yapılandırılmış fixture
+girdileri testte birebir karşılaştırılır. Tanım değişikliği
+yalnız iki kaynağı birlikte güncelleyen, ilgili fixture/test kanıtını yenileyen ve
+`INV-GOV-002` değişiklik yetkisini sağlayan Jira Change Request ile yapılabilir.
+
 ## 1. Tenant izolasyonu ve veri sahipliği
 
 ### `INV-TEN-001` — Database-per-Tenant
