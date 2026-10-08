@@ -5,6 +5,9 @@ import { dirname } from "node:path";
 const TRUST_STORE_YOLU = process.platform === "win32"
   ? "C:\\ProgramData\\TupBayiProje\\human-gate-keys.json"
   : "/etc/tupbayiproje/human-gate-keys.json";
+const WINDOWS_SISTEM_DIZINI = "C:\\Windows\\System32";
+export const WINDOWS_POWERSHELL_YOLU =
+  `${WINDOWS_SISTEM_DIZINI}\\WindowsPowerShell\\v1.0\\powershell.exe`;
 const GUVENILIR_WINDOWS_SIDLERI = new Set([
   "S-1-5-18",
   "S-1-5-32-544",
@@ -20,8 +23,8 @@ export function onayTrustStoreOku() {
     throw new Error("Human Gate trust store ve ust dizini normal dosya sistemi nesnesi olmalidir.");
   }
   if (process.platform === "win32") {
-    windowsYoluDogrula(dizinYolu);
-    windowsYoluDogrula(TRUST_STORE_YOLU);
+    windowsYoluDogrula(dizinYolu, true);
+    windowsYoluDogrula(TRUST_STORE_YOLU, false);
   } else {
     posixNesnesiniDogrula(dizin);
     posixNesnesiniDogrula(dosya);
@@ -49,10 +52,15 @@ export function windowsAclGuvenliMi(acl) {
   });
 }
 
-function windowsYoluDogrula(yol) {
+function windowsYoluDogrula(yol, dizinMi) {
   const betik = String.raw`
     $ErrorActionPreference = 'Stop'
-    $acl = Get-Acl -LiteralPath $args[0]
+    $sections = [System.Security.AccessControl.AccessControlSections]::Access -bor [System.Security.AccessControl.AccessControlSections]::Owner
+    if ($args[1] -eq 'directory') {
+      $acl = [System.IO.Directory]::GetAccessControl($args[0], $sections)
+    } else {
+      $acl = [System.IO.File]::GetAccessControl($args[0], $sections)
+    }
     $owner = ([System.Security.Principal.NTAccount]$acl.Owner).Translate([System.Security.Principal.SecurityIdentifier]).Value
     $rules = @($acl.Access | ForEach-Object {
       [pscustomobject]@{
@@ -69,9 +77,27 @@ function windowsYoluDogrula(yol) {
     } | ConvertTo-Json -Compress -Depth 4
   `;
   const sonuc = spawnSync(
-    "powershell.exe",
-    ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command", betik, yol],
-    { encoding: "utf8", windowsHide: true, maxBuffer: 128 * 1024 },
+    WINDOWS_POWERSHELL_YOLU,
+    [
+      "-NoLogo",
+      "-NoProfile",
+      "-NonInteractive",
+      "-Command",
+      betik,
+      yol,
+      dizinMi ? "directory" : "file",
+    ],
+    {
+      cwd: WINDOWS_SISTEM_DIZINI,
+      encoding: "utf8",
+      env: {
+        SystemRoot: "C:\\Windows",
+        WINDIR: "C:\\Windows",
+        ComSpec: "C:\\Windows\\System32\\cmd.exe",
+      },
+      windowsHide: true,
+      maxBuffer: 128 * 1024,
+    },
   );
   if (sonuc.status !== 0) {
     throw new Error("Human Gate trust store Windows ACL bilgisi dogrulanamadi.");

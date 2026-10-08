@@ -13,7 +13,10 @@ import {
   TeslimatHattiHatasi,
   humanGateImzaMetniOlustur,
 } from "../src/teslimat-hatti.mjs";
-import { windowsAclGuvenliMi } from "../src/human-gate-trust-store.mjs";
+import {
+  WINDOWS_POWERSHELL_YOLU,
+  windowsAclGuvenliMi,
+} from "../src/human-gate-trust-store.mjs";
 
 const { privateKey: onayOzelAnahtari, publicKey: onayAcikAnahtari } =
   generateKeyPairSync("ed25519");
@@ -471,6 +474,10 @@ describe("TBP-238 kontrollu teslimat hatti", () => {
   });
 
   test("TEST-TBP-238-HUMAN-03 Windows trust store ACL operator yazmasina fail-closed kalir", () => {
+    assert.equal(
+      WINDOWS_POWERSHELL_YOLU,
+      "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+    );
     const guvenliAcl = {
       sahipSid: "S-1-5-32-544",
       korumaliMi: true,
