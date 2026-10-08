@@ -147,3 +147,53 @@ yalniz en yuksek seviyenin nedenleri kanonik kural sirasinda dondurulur.
 Bos girdi LOW kabul edilmez ve `RISK_BELIRSIZ` ile MEDIUM olur. Jira
 sinirindaki bozuk alan tipleri `RISK_GIRDISI_GECERSIZ` ile MEDIUM olur; motor
 gecerli parcalari kullanarak sessizce risk karari vermez.
+
+## TBP-236 API guvenlik kapisi
+
+`src/api-guvenlik-kapisi.mjs`, normalize edilmis endpoint hardening
+sozlesmesini ag cagrisi yapmadan ve fail-closed olarak degerlendirir. Her
+endpoint su 17 kontrolu `PASS` ya da kanitli ve gerekceli `NOT_APPLICABLE`
+olarak bildirmelidir:
+
+- authentication ve authorization
+- tenant izolasyonu
+- girdi dogrulama ve payload siniri
+- rate limit, kota ve burst politikasi
+- idempotency
+- timeout/cancellation ve retry siniri
+- CORS/CSRF politikasi
+- secret yonetimi
+- hata yaniti standardi
+- PII/secret log redaksiyonu
+- webhook imza dogrulama ve replay korumasi
+- API surumleme/kullanimdan kaldirma
+- OpenAPI contract dogrulama
+- abuse/anomali telemetry
+
+Her kontrol en az bir kanit tasir. `securityTestleri` veya `contractTestleri`
+`PASS` degilse sonuc `BLOCKED` olur ve bulgu merge ile release'i engeller.
+Kritik endpoint `failOpen: false` degerini acikca bildirmelidir; eksik ya da
+true deger kabul edilmez. OpenAPI'nin kendi contract kurallari bu modulde
+tekrarlanmaz; bu kapi onlarin test sonucunu ve endpoint kanitini tuketir.
+
+```js
+import {
+  apiGuvenliginiDegerlendir,
+  rateLimitKarariVer,
+} from "./src/api-guvenlik-kapisi.mjs";
+
+const karar = apiGuvenliginiDegerlendir({
+  endpointler,
+  kaliteKapilari: {
+    securityTestleri: "PASS",
+    contractTestleri: "PASS",
+  },
+});
+```
+
+Referans rate limit karari sabit pencere kullanir. `kota + burst`, bir pencere
+icindeki toplam izinli istek sayisidir; sinira ulasan sonraki istek pencere
+doluncaya kadar reddedilir. Fonksiyon saat ya da kalici state okumaz. Politika
+ile `pencereYasiMs` ve `oncekiIstekSayisi` girdileri ayniysa karar da aynidir.
+Dagitik sayacin atomikligi ve depolamasi adapter sorumlulugudur; API katmani
+bu saf karari authoritative sayac state'i ile uygular.
