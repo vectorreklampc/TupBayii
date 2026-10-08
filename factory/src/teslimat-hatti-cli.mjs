@@ -13,9 +13,13 @@ const [asama, ...secenekler] = process.argv.slice(2);
 try {
   const girdiler = secenekleriOku(secenekler);
   const plan = JSON.parse(readFileSync(resolve(girdiler.plan), "utf8"));
+  const onayAnahtarlari = girdiler.approvalKeys
+    ? JSON.parse(readFileSync(resolve(girdiler.approvalKeys), "utf8"))
+    : {};
   const hat = new TeslimatHatti({
     depoYolu: resolve(girdiler.database),
     komutCalistir,
+    onayAnahtarlari,
   });
   try {
     const sonuc = await hat.calistir(asama, plan, {
@@ -46,6 +50,7 @@ function secenekleriOku(secenekler) {
     ["--actor", "actor"],
     ["--trace", "trace"],
     ["--correlation", "correlation"],
+    ["--approval-keys", "approvalKeys"],
   ]);
   for (let index = 0; index < secenekler.length; index += 2) {
     const anahtar = esleme.get(secenekler[index]);
@@ -65,8 +70,8 @@ function secenekleriOku(secenekler) {
 
 async function komutCalistir(ad, komut, baglam) {
   const [calistirilabilir, ...argumanlar] = komut;
-  const deployKomutuMu = ad.endsWith("Deploy");
-  const kanitDizini = deployKomutuMu
+  const hedefDogrulamaKomutuMu = ad.endsWith("ArtifactVerify");
+  const kanitDizini = hedefDogrulamaKomutuMu
     ? mkdtempSync(join(tmpdir(), "tbp-deploy-attestation-"))
     : null;
   const kanitYolu = kanitDizini ? join(kanitDizini, "sha256") : null;
@@ -91,8 +96,15 @@ async function komutCalistir(ad, komut, baglam) {
         TBP_CORRELATION_ID: baglam.korelasyonKimligi,
         TBP_ARTIFACT_PATH: baglam.artefaktYolu,
         TBP_ARTIFACT_SHA256: baglam.artefaktSha256,
+        ...(baglam.kilitKimligi
+          ? {
+            TBP_FENCE_TOKEN: baglam.kilitKimligi,
+            TBP_FENCE_GENERATION: String(baglam.fencingNesli),
+            TBP_IDEMPOTENCY_KEY: baglam.idempotencyAnahtari,
+          }
+          : {}),
         ...(kanitYolu
-          ? { TBP_DEPLOYMENT_ATTESTATION_PATH: kanitYolu }
+          ? { TBP_TARGET_ATTESTATION_PATH: kanitYolu }
           : {}),
       },
       shell: false,
@@ -104,17 +116,38 @@ async function komutCalistir(ad, komut, baglam) {
         try {
           const cikisKodu = Number.isInteger(kod) ? kod : 1;
           let dagitilanArtefaktSha256;
-          if (deployKomutuMu && cikisKodu === 0) {
+          let hedefKaniti;
+          if (hedefDogrulamaKomutuMu && cikisKodu === 0) {
             const kanit = lstatSync(kanitYolu);
-            if (!kanit.isFile() || kanit.size > 65) {
-              throw new Error("Deploy attestation gecerli bir SHA-256 dosyasi degil.");
+            if (!kanit.isFile() || kanit.size > 2048) {
+              throw new Error("Hedef attestation gecerli bir JSON dosyasi degil.");
             }
-            dagitilanArtefaktSha256 = readFileSync(kanitYolu, "utf8").trim();
-            if (!/^[0-9a-f]{64}$/.test(dagitilanArtefaktSha256)) {
-              throw new Error("Deploy attestation SHA-256 biciminde degil.");
+            hedefKaniti = JSON.parse(readFileSync(kanitYolu, "utf8"));
+            const izinliAlanlar = new Set([
+              "artefaktSha256",
+              "kilitKimligi",
+              "fencingNesli",
+              "idempotencyAnahtari",
+            ]);
+            if (!hedefKaniti || typeof hedefKaniti !== "object"
+                || Array.isArray(hedefKaniti)
+                || Object.keys(hedefKaniti).some((alan) => !izinliAlanlar.has(alan))
+                || !/^[0-9a-f]{64}$/.test(hedefKaniti.artefaktSha256 ?? "")
+                || hedefKaniti.kilitKimligi !== baglam.kilitKimligi
+                || hedefKaniti.fencingNesli !== baglam.fencingNesli
+                || hedefKaniti.idempotencyAnahtari !== baglam.idempotencyAnahtari) {
+              throw new Error("Hedef attestation fence baglamiyla eslesmiyor.");
             }
+            dagitilanArtefaktSha256 = hedefKaniti.artefaktSha256;
           }
-          resolveSonuc({ cikisKodu, sinyal, dagitilanArtefaktSha256 });
+          resolveSonuc({
+            cikisKodu,
+            sinyal,
+            dagitilanArtefaktSha256,
+            kilitKimligi: hedefKaniti?.kilitKimligi,
+            fencingNesli: hedefKaniti?.fencingNesli,
+            idempotencyAnahtari: hedefKaniti?.idempotencyAnahtari,
+          });
         } catch (hata) {
           reject(hata);
         }

@@ -1,4 +1,9 @@
-import { createHash, randomUUID } from "node:crypto";
+import {
+  createHash,
+  createPublicKey,
+  randomUUID,
+  verify as kriptografikImzaDogrula,
+} from "node:crypto";
 import { constants as dosyaSistemiSabitleri, createReadStream } from "node:fs";
 import { chmod, copyFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
@@ -14,11 +19,13 @@ const ADAY_KAPILARI = Object.freeze([
 ]);
 const STAGING_KAPILARI = Object.freeze([
   "stagingDeploy",
+  "stagingArtifactVerify",
   "stagingSmoke",
   "stagingTelemetry",
 ]);
 const PRODUCTION_KAPILARI = Object.freeze([
   "productionDeploy",
+  "productionArtifactVerify",
   "productionSmoke",
   "productionTelemetry",
 ]);
@@ -48,6 +55,7 @@ export class TeslimatHatti {
   #leaseSuresiMs;
   #heartbeatAraligiMs;
   #artefaktDepoDizini;
+  #onayAnahtarlari;
 
   constructor({
     depoYolu,
@@ -55,6 +63,7 @@ export class TeslimatHatti {
     saat = () => new Date(),
     leaseSuresiMs = 30_000,
     heartbeatAraligiMs = 10_000,
+    onayAnahtarlari = {},
   }) {
     if (typeof komutCalistir !== "function") {
       throw new TypeError("komutCalistir fonksiyon olmalidir.");
@@ -74,6 +83,7 @@ export class TeslimatHatti {
     this.#leaseSuresiMs = leaseSuresiMs;
     this.#heartbeatAraligiMs = heartbeatAraligiMs;
     this.#artefaktDepoDizini = `${depoYolu}.artifacts`;
+    this.#onayAnahtarlari = onayAnahtarlariniDogrula(onayAnahtarlari);
   }
 
   async calistir(asama, hamPlan, hamBaglam) {
@@ -233,7 +243,11 @@ export class TeslimatHatti {
         { releaseKimligi: plan.releaseKimligi, mevcutDurum: mevcut.durum },
       );
     }
-    onayBaginiDogrula(plan.insanOnayi, mevcut, true);
+    onayBaginiDogrula(plan.insanOnayi, mevcut, {
+      ortam: "production",
+      stagingZorunluMu: true,
+    });
+    onayYetkisiniDogrula(plan.insanOnayi, this.#onayAnahtarlari, mevcut);
     this.#depo.onayKaydet({
       releaseKimligi: plan.releaseKimligi,
       onayTuru: "PRODUCTION",
@@ -283,15 +297,23 @@ export class TeslimatHatti {
         { releaseKimligi: plan.releaseKimligi, mevcutDurum: mevcut.durum },
       );
     }
-    onayBaginiDogrula(plan.recoveryOnayi, mevcut, false);
+    const mevcutKilit = this.#depo.kilitGetir(ortam);
+    onayBaginiDogrula(plan.recoveryOnayi, mevcut, {
+      ortam,
+      kilitNesli: mevcutKilit?.nesil ?? null,
+      stagingZorunluMu: false,
+    });
+    onayYetkisiniDogrula(plan.recoveryOnayi, this.#onayAnahtarlari, mevcut);
     const leaseZamanlari = this.#leaseZamanlari();
     const kilit = this.#depo.kilitKurtarmaIcinDevral({
       ortam,
       releaseKimligi: plan.releaseKimligi,
       sahip: baglam.calistirici,
       kilitKimligi: randomUUID(),
+      beklenenNesil: plan.recoveryOnayi.kilitNesli,
       ...leaseZamanlari,
     });
+    const heartbeat = this.#heartbeatBaslat(kilit);
     try {
       this.#depo.onayKaydet({
         releaseKimligi: plan.releaseKimligi,
@@ -304,7 +326,9 @@ export class TeslimatHatti {
         { ...plan, dagitimArtefaktYolu: mevcut.dagitimArtefaktYolu },
         baglam,
         ortam,
+        kilit,
       );
+      heartbeat.hataFirlat();
       this.#depo.kilitDogrula(this.#kilitBaglami(kilit));
       const rollbackBasarili = basariliMi(rollbackSonucu);
       const hedefDurum = rollbackBasarili
@@ -323,6 +347,7 @@ export class TeslimatHatti {
       });
       return sonucOlustur(this.#depo.releaseGetir(plan.releaseKimligi));
     } finally {
+      heartbeat.durdur();
       this.#depo.kilitBirak(kilit);
     }
   }
@@ -348,19 +373,7 @@ export class TeslimatHatti {
       kilitKimligi: randomUUID(),
       ...leaseZamanlari,
     });
-    let heartbeatHatasi = null;
-    const heartbeat = setInterval(() => {
-      try {
-        const heartbeatZamanlari = this.#leaseZamanlari();
-        this.#depo.kilitYenile({
-          ...kilit,
-          ...heartbeatZamanlari,
-        });
-      } catch (hata) {
-        heartbeatHatasi = hata;
-      }
-    }, this.#heartbeatAraligiMs);
-    heartbeat.unref();
+    const heartbeat = this.#heartbeatBaslat(kilit);
     try {
       this.#depo.durumDegistir({
         releaseKimligi: plan.releaseKimligi,
@@ -371,13 +384,22 @@ export class TeslimatHatti {
         kilit: this.#kilitBaglami(kilit),
       });
       for (const kapi of kapilar) {
-        const sonuc = await this.#komutuCalistir(kapi, plan, baglam, ortam);
-        if (heartbeatHatasi) throw heartbeatHatasi;
+        const sonuc = await this.#komutuCalistir(kapi, plan, baglam, ortam, kilit);
+        heartbeat.hataFirlat();
         this.#depo.kilitDogrula(this.#kilitBaglami(kilit));
         let kapiBasarili = basariliMi(sonuc);
         let artefaktHatasi = null;
+        if (kapiBasarili && kapi.endsWith("ArtifactVerify")) {
+          kapiBasarili = sonuc.dagitilanArtefaktSha256 === plan.artefaktSha256
+            && sonuc.kilitKimligi === kilit.kilitKimligi
+            && sonuc.fencingNesli === kilit.nesil
+            && sonuc.idempotencyAnahtari === idempotencyAnahtariOlustur(
+              plan.releaseKimligi,
+              ortam,
+              kapi,
+            );
+        }
         if (kapiBasarili && kapi.endsWith("Deploy")) {
-          kapiBasarili = sonuc.dagitilanArtefaktSha256 === plan.artefaktSha256;
           try {
             await artefaktDogrula(
               plan.dagitimArtefaktYolu,
@@ -432,7 +454,7 @@ export class TeslimatHatti {
       });
       return sonucOlustur(this.#depo.releaseGetir(plan.releaseKimligi));
     } finally {
-      clearInterval(heartbeat);
+      heartbeat.durdur();
       this.#depo.kilitBirak(kilit);
     }
   }
@@ -443,6 +465,7 @@ export class TeslimatHatti {
       plan,
       baglam,
       ortam,
+      kilit,
     );
     this.#depo.kilitDogrula(this.#kilitBaglami(kilit));
     const rollbackBasarili = basariliMi(rollbackSonucu);
@@ -460,7 +483,7 @@ export class TeslimatHatti {
     return sonucOlustur(this.#depo.releaseGetir(plan.releaseKimligi));
   }
 
-  async #komutuCalistir(ad, plan, baglam, ortam) {
+  async #komutuCalistir(ad, plan, baglam, ortam, kilit = null) {
     const komut = plan.komutlar[ad];
     try {
       return await this.#komutCalistir(ad, [...komut], {
@@ -470,6 +493,11 @@ export class TeslimatHatti {
         korelasyonKimligi: baglam.korelasyonKimligi,
         artefaktYolu: plan.dagitimArtefaktYolu ?? plan.artefaktYolu,
         artefaktSha256: plan.artefaktSha256,
+        kilitKimligi: kilit?.kilitKimligi ?? null,
+        fencingNesli: kilit?.nesil ?? null,
+        idempotencyAnahtari: kilit
+          ? idempotencyAnahtariOlustur(plan.releaseKimligi, ortam, ad)
+          : null,
       });
     } catch {
       return { cikisKodu: 1 };
@@ -492,6 +520,27 @@ export class TeslimatHatti {
     return {
       simdi: simdi.toISOString(),
       leaseBitis: new Date(simdi.getTime() + this.#leaseSuresiMs).toISOString(),
+    };
+  }
+
+  #heartbeatBaslat(kilit) {
+    let heartbeatHatasi = null;
+    const zamanlayici = setInterval(() => {
+      try {
+        this.#depo.kilitYenile({
+          ...kilit,
+          ...this.#leaseZamanlari(),
+        });
+      } catch (hata) {
+        heartbeatHatasi = hata;
+      }
+    }, this.#heartbeatAraligiMs);
+    zamanlayici.unref();
+    return {
+      durdur: () => clearInterval(zamanlayici),
+      hataFirlat: () => {
+        if (heartbeatHatasi) throw heartbeatHatasi;
+      },
     };
   }
 
@@ -668,7 +717,9 @@ export class TeslimatHattiDeposu {
       SELECT kanit_kimligi AS kanitKimligi,
         onaylayan_kimligi AS onaylayanKimligi,
         artefakt_sha256 AS artefaktSha256,
-        staging_kanit_kimligi AS stagingKanitKimligi
+        staging_kanit_kimligi AS stagingKanitKimligi,
+        ortam, kilit_nesli AS kilitNesli,
+        anahtar_kimligi AS anahtarKimligi, imza
       FROM human_gate_onaylari
       WHERE release_kimligi = ? AND onay_turu = ?
     `).get(releaseKimligi, onayTuru);
@@ -676,7 +727,11 @@ export class TeslimatHattiDeposu {
       const ayni = mevcut.kanitKimligi === onay.kanitKimligi
         && mevcut.onaylayanKimligi === onay.onaylayanKimligi
         && mevcut.artefaktSha256 === onay.artefaktSha256
-        && mevcut.stagingKanitKimligi === (onay.stagingKanitKimligi ?? null);
+        && mevcut.stagingKanitKimligi === (onay.stagingKanitKimligi ?? null)
+        && mevcut.ortam === onay.ortam
+        && mevcut.kilitNesli === (onay.kilitNesli ?? null)
+        && mevcut.anahtarKimligi === onay.anahtarKimligi
+        && mevcut.imza === onay.imza;
       if (ayni) return;
       throw new TeslimatHattiHatasi(
         "RELEASE_IMMUTABLE_CONFLICT",
@@ -687,9 +742,9 @@ export class TeslimatHattiDeposu {
     this.#veritabani.prepare(`
       INSERT INTO human_gate_onaylari (
         release_kimligi, onay_turu, kanit_kimligi, onaylayan_kimligi,
-        artefakt_sha256, staging_kanit_kimligi, aktor,
-        korelasyon_kimligi, zaman_damgasi
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        artefakt_sha256, staging_kanit_kimligi, ortam, kilit_nesli,
+        anahtar_kimligi, imza, aktor, korelasyon_kimligi, zaman_damgasi
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       releaseKimligi,
       onayTuru,
@@ -697,6 +752,10 @@ export class TeslimatHattiDeposu {
       onay.onaylayanKimligi,
       onay.artefaktSha256,
       onay.stagingKanitKimligi ?? null,
+      onay.ortam,
+      onay.kilitNesli ?? null,
+      onay.anahtarKimligi,
+      onay.imza,
       baglam.aktor,
       baglam.korelasyonKimligi,
       baglam.zamanDamgasi,
@@ -711,22 +770,24 @@ export class TeslimatHattiDeposu {
     simdi,
     leaseBitis,
   }) {
+    this.#veritabani.exec("BEGIN IMMEDIATE");
     try {
+      const mevcut = this.#veritabani.prepare(`
+        SELECT release_kimligi AS releaseKimligi
+        FROM deployment_kilitleri WHERE ortam = ?
+      `).get(ortam);
+      if (mevcut) throw kilitHatasi(ortam, releaseKimligi);
+      const nesil = this.#fenceNesliArtir(ortam);
       this.#veritabani.prepare(`
         INSERT INTO deployment_kilitleri
           (ortam, release_kimligi, sahip, kilit_kimligi, nesil,
            alinma_zamani, lease_bitis_zamani)
-        VALUES (?, ?, ?, ?, 1, ?, ?)
-      `).run(ortam, releaseKimligi, sahip, kilitKimligi, simdi, leaseBitis);
-      return { ortam, releaseKimligi, kilitKimligi, nesil: 1 };
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).run(ortam, releaseKimligi, sahip, kilitKimligi, nesil, simdi, leaseBitis);
+      this.#veritabani.exec("COMMIT");
+      return { ortam, releaseKimligi, kilitKimligi, nesil };
     } catch (hata) {
-      if (String(hata.message).includes("UNIQUE constraint failed")) {
-        throw new TeslimatHattiHatasi(
-          "RELEASE_DEPLOYMENT_LOCKED",
-          `${ortam} ortami baska bir teslimat tarafindan kilitli.`,
-          { releaseKimligi },
-        );
-      }
+      if (this.#veritabani.isTransaction) this.#veritabani.exec("ROLLBACK");
       throw hata;
     }
   }
@@ -736,6 +797,7 @@ export class TeslimatHattiDeposu {
     releaseKimligi,
     sahip,
     kilitKimligi,
+    beklenenNesil,
     simdi,
     leaseBitis,
   }) {
@@ -752,10 +814,11 @@ export class TeslimatHattiDeposu {
           { releaseKimligi },
         );
       }
+      if (mevcut.nesil !== beklenenNesil) throw fencingHatasi(releaseKimligi);
       if (mevcut.leaseBitis >= simdi) {
         throw kilitHatasi(ortam, releaseKimligi);
       }
-      const nesil = mevcut.nesil + 1;
+      const nesil = this.#fenceNesliArtir(ortam);
       this.#veritabani.prepare(`
         UPDATE deployment_kilitleri
         SET sahip = ?, kilit_kimligi = ?, nesil = ?,
@@ -782,6 +845,14 @@ export class TeslimatHattiDeposu {
 
   kilitDogrula(kilit) {
     this.#kilitDogrula(kilit);
+  }
+
+  kilitGetir(ortam) {
+    return this.#veritabani.prepare(`
+      SELECT release_kimligi AS releaseKimligi, kilit_kimligi AS kilitKimligi,
+        nesil, lease_bitis_zamani AS leaseBitis
+      FROM deployment_kilitleri WHERE ortam = ?
+    `).get(ortam) ?? null;
   }
 
   kilitBirak({ ortam, releaseKimligi, kilitKimligi, nesil }) {
@@ -823,6 +894,15 @@ export class TeslimatHattiDeposu {
       baglam.korelasyonKimligi,
       baglam.zamanDamgasi,
     );
+  }
+
+  #fenceNesliArtir(ortam) {
+    return this.#veritabani.prepare(`
+      INSERT INTO deployment_fence_sayaclari (ortam, son_nesil)
+      VALUES (?, 1)
+      ON CONFLICT(ortam) DO UPDATE SET son_nesil = son_nesil + 1
+      RETURNING son_nesil AS nesil
+    `).get(ortam).nesil;
   }
 
   #kilitDogrula({ ortam, releaseKimligi, kilitKimligi, nesil, simdi }) {
@@ -879,6 +959,11 @@ export class TeslimatHattiDeposu {
         FOREIGN KEY (release_kimligi) REFERENCES release_kayitlari (release_kimligi)
       ) STRICT;
 
+      CREATE TABLE IF NOT EXISTS deployment_fence_sayaclari (
+        ortam TEXT PRIMARY KEY,
+        son_nesil INTEGER NOT NULL CHECK (son_nesil > 0)
+      ) STRICT;
+
       CREATE TABLE IF NOT EXISTS human_gate_onaylari (
         release_kimligi TEXT NOT NULL,
         onay_turu TEXT NOT NULL CHECK (onay_turu IN ('PRODUCTION', 'RECOVERY')),
@@ -886,6 +971,10 @@ export class TeslimatHattiDeposu {
         onaylayan_kimligi TEXT NOT NULL,
         artefakt_sha256 TEXT NOT NULL,
         staging_kanit_kimligi TEXT,
+        ortam TEXT NOT NULL,
+        kilit_nesli INTEGER,
+        anahtar_kimligi TEXT NOT NULL,
+        imza TEXT NOT NULL,
         aktor TEXT NOT NULL,
         korelasyon_kimligi TEXT NOT NULL,
         zaman_damgasi TEXT NOT NULL,
@@ -951,8 +1040,8 @@ function planDogrula(plan) {
   for (const alan of ["imzaKimligi", "backupRestoreKanitKimligi"]) {
     kanitKimligiDogrula(plan[alan], alan);
   }
-  onayYapisiDogrula(plan.insanOnayi, "insanOnayi", true);
-  onayYapisiDogrula(plan.recoveryOnayi, "recoveryOnayi", false);
+  onayYapisiDogrula(plan.insanOnayi, "insanOnayi", "production");
+  onayYapisiDogrula(plan.recoveryOnayi, "recoveryOnayi", "recovery");
   if (!/^release-[A-Za-z0-9._-]+$/.test(plan.releaseKimligi)) {
     throw new TypeError("releaseKimligi kanonik release-* biciminde olmalidir.");
   }
@@ -1183,7 +1272,7 @@ function stagingKanitKimligiOlustur(release) {
   return `STAGING-${ozet}`;
 }
 
-function onayYapisiDogrula(onay, alan, stagingZorunluMu) {
+function onayYapisiDogrula(onay, alan, onayTuru) {
   if (onay === null || onay === undefined) return;
   if (!onay || typeof onay !== "object" || Array.isArray(onay)) {
     throw new TypeError(`${alan} nesne olmalidir.`);
@@ -1193,25 +1282,53 @@ function onayYapisiDogrula(onay, alan, stagingZorunluMu) {
     "onaylayanKimligi",
     "releaseKimligi",
     "artefaktSha256",
-    ...(stagingZorunluMu ? ["stagingKanitKimligi"] : []),
+    "ortam",
+    "anahtarKimligi",
+    "imza",
+    ...(onayTuru === "production" ? ["stagingKanitKimligi"] : ["kilitNesli"]),
   ]);
   if (Object.keys(onay).some((anahtar) => !izinliAlanlar.has(anahtar))) {
     throw new TypeError(`${alan} bilinmeyen alan iceremez.`);
   }
-  for (const anahtar of ["kanitKimligi", "onaylayanKimligi", "releaseKimligi"]) {
+  for (const anahtar of [
+    "kanitKimligi",
+    "onaylayanKimligi",
+    "releaseKimligi",
+    "anahtarKimligi",
+  ]) {
     kanitKimligiDogrula(onay[anahtar], `${alan}.${anahtar}`);
   }
   if (!/^[0-9a-f]{64}$/.test(onay.artefaktSha256 ?? "")) {
     throw new TypeError(`${alan}.artefaktSha256 SHA-256 biciminde olmalidir.`);
   }
-  if (stagingZorunluMu) {
+  if (onayTuru === "production") {
     kanitKimligiDogrula(onay.stagingKanitKimligi, `${alan}.stagingKanitKimligi`);
+    if (onay.ortam !== "production") {
+      throw new TypeError(`${alan}.ortam production olmalidir.`);
+    }
+  } else {
+    if (!new Set(["staging", "production"]).has(onay.ortam)) {
+      throw new TypeError(`${alan}.ortam staging veya production olmalidir.`);
+    }
+    if (!Number.isSafeInteger(onay.kilitNesli) || onay.kilitNesli < 1) {
+      throw new TypeError(`${alan}.kilitNesli pozitif tamsayi olmalidir.`);
+    }
+  }
+  if (typeof onay.imza !== "string"
+      || !/^[A-Za-z0-9_-]{64,512}$/.test(onay.imza)) {
+    throw new TypeError(`${alan}.imza base64url biciminde olmalidir.`);
   }
 }
 
-function onayBaginiDogrula(onay, release, stagingZorunluMu) {
+function onayBaginiDogrula(onay, release, {
+  ortam,
+  kilitNesli = null,
+  stagingZorunluMu,
+}) {
   const gecerli = onay.releaseKimligi === release.releaseKimligi
     && onay.artefaktSha256 === release.artefaktSha256
+    && onay.ortam === ortam
+    && (kilitNesli === null || onay.kilitNesli === kilitNesli)
     && (!stagingZorunluMu
       || onay.stagingKanitKimligi === release.stagingKanitKimligi);
   if (!gecerli) {
@@ -1221,6 +1338,74 @@ function onayBaginiDogrula(onay, release, stagingZorunluMu) {
       { releaseKimligi: release.releaseKimligi, mevcutDurum: release.durum },
     );
   }
+}
+
+export function humanGateImzaMetniOlustur(onay) {
+  return JSON.stringify({
+    surum: 1,
+    kanitKimligi: onay.kanitKimligi,
+    onaylayanKimligi: onay.onaylayanKimligi,
+    releaseKimligi: onay.releaseKimligi,
+    artefaktSha256: onay.artefaktSha256,
+    stagingKanitKimligi: onay.stagingKanitKimligi ?? null,
+    ortam: onay.ortam,
+    kilitNesli: onay.kilitNesli ?? null,
+    anahtarKimligi: onay.anahtarKimligi,
+  });
+}
+
+function onayAnahtarlariniDogrula(hamAnahtarlar) {
+  if (!hamAnahtarlar || typeof hamAnahtarlar !== "object" || Array.isArray(hamAnahtarlar)) {
+    throw new TypeError("onayAnahtarlari nesne olmalidir.");
+  }
+  const sonuc = new Map();
+  for (const [anahtarKimligi, kayit] of Object.entries(hamAnahtarlar)) {
+    kanitKimligiDogrula(anahtarKimligi, "onayAnahtarlari anahtar kimligi");
+    if (!kayit || typeof kayit !== "object" || Array.isArray(kayit)) {
+      throw new TypeError("onayAnahtarlari kaydi nesne olmalidir.");
+    }
+    kanitKimligiDogrula(
+      kayit.onaylayanKimligi,
+      `onayAnahtarlari.${anahtarKimligi}.onaylayanKimligi`,
+    );
+    if (!doluMetinMi(kayit.publicKeyPem)) {
+      throw new TypeError(`onayAnahtarlari.${anahtarKimligi}.publicKeyPem zorunludur.`);
+    }
+    sonuc.set(anahtarKimligi, {
+      onaylayanKimligi: kayit.onaylayanKimligi,
+      publicKey: createPublicKey(kayit.publicKeyPem),
+    });
+  }
+  return sonuc;
+}
+
+function onayYetkisiniDogrula(onay, onayAnahtarlari, release) {
+  const guvenilirAnahtar = onayAnahtarlari.get(onay.anahtarKimligi);
+  let imzaGecerli = false;
+  try {
+    imzaGecerli = Boolean(guvenilirAnahtar)
+      && guvenilirAnahtar.onaylayanKimligi === onay.onaylayanKimligi
+      && kriptografikImzaDogrula(
+        null,
+        Buffer.from(humanGateImzaMetniOlustur(onay)),
+        guvenilirAnahtar.publicKey,
+        Buffer.from(onay.imza, "base64url"),
+      );
+
+  } catch {
+    imzaGecerli = false;
+  }
+  if (!imzaGecerli) {
+    throw new TeslimatHattiHatasi(
+      "RELEASE_HUMAN_GATE_UNTRUSTED",
+      "Human Gate kaniti guvenilir bir onay anahtariyla imzalanmamis.",
+      { releaseKimligi: release.releaseKimligi, mevcutDurum: release.durum },
+    );
+  }
+}
+
+function idempotencyAnahtariOlustur(releaseKimligi, ortam, komutAdi) {
+  return `${releaseKimligi}:${ortam}:${komutAdi}`;
 }
 
 function doluMetinMi(deger) {

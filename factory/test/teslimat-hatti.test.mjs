@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
+import { createHash, generateKeyPairSync, sign } from "node:crypto";
 import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -11,7 +11,17 @@ import {
   TeslimatHatti,
   TeslimatHattiDeposu,
   TeslimatHattiHatasi,
+  humanGateImzaMetniOlustur,
 } from "../src/teslimat-hatti.mjs";
+
+const { privateKey: onayOzelAnahtari, publicKey: onayAcikAnahtari } =
+  generateKeyPairSync("ed25519");
+const ONAY_ANAHTARLARI = {
+  "jira-human-gate-1": {
+    onaylayanKimligi: "atlassian-712020",
+    publicKeyPem: onayAcikAnahtari.export({ type: "spki", format: "pem" }),
+  },
+};
 
 const geciciDizinler = [];
 
@@ -57,9 +67,11 @@ function plan(artefaktYolu, degisiklik = {}) {
       acceptance: ["acceptance"],
       packageSign: ["package-sign"],
       stagingDeploy: ["staging-deploy"],
+      stagingArtifactVerify: ["staging-artifact-verify"],
       stagingSmoke: ["staging-smoke"],
       stagingTelemetry: ["staging-telemetry"],
       productionDeploy: ["production-deploy"],
+      productionArtifactVerify: ["production-artifact-verify"],
       productionSmoke: ["production-smoke"],
       productionTelemetry: ["production-telemetry"],
       rollback: ["rollback"],
@@ -84,28 +96,49 @@ function basariliCalistirici(cagrilar, sonucDegistir = {}) {
     cagrilar.push(ad);
     return sonucDegistir[ad] ?? {
       cikisKodu: 0,
-      ...(ad.endsWith("Deploy")
-        ? { dagitilanArtefaktSha256: komutBaglami.artefaktSha256 }
+      ...(ad.endsWith("ArtifactVerify")
+        ? {
+          dagitilanArtefaktSha256: komutBaglami.artefaktSha256,
+          kilitKimligi: komutBaglami.kilitKimligi,
+          fencingNesli: komutBaglami.fencingNesli,
+          idempotencyAnahtari: komutBaglami.idempotencyAnahtari,
+        }
         : {}),
     };
+  };
+}
+
+function onayiImzala(onay) {
+  return {
+    ...onay,
+    anahtarKimligi: "jira-human-gate-1",
+    imza: sign(
+      null,
+      Buffer.from(humanGateImzaMetniOlustur({
+        ...onay,
+        anahtarKimligi: "jira-human-gate-1",
+      })),
+      onayOzelAnahtari,
+    ).toString("base64url"),
   };
 }
 
 function insanOnayiEkle(releasePlani, stagingSonucu) {
   return {
     ...releasePlani,
-    insanOnayi: {
+    insanOnayi: onayiImzala({
       kanitKimligi: "HUMAN-GATE-238",
       onaylayanKimligi: "atlassian-712020",
       releaseKimligi: releasePlani.releaseKimligi,
       artefaktSha256: releasePlani.artefaktSha256,
       stagingKanitKimligi: stagingSonucu.stagingKanitKimligi,
-    },
+      ortam: "production",
+    }),
   };
 }
 
 describe("TBP-238 kontrollu teslimat hatti", () => {
-  test("TEST-TBP-238-CLI-01 candidate ve staging komutlari deploy ozet kanitiyla calisir", () => {
+  test("TEST-TBP-238-CLI-01 candidate staging ve imzali production akisi calisir", () => {
     const { dizin, artefaktYolu, depoYolu } = kurulum();
     const planYolu = join(dizin, "release-plan.json");
     const komut = [process.execPath, "-e", "process.exit(0)"];
@@ -113,10 +146,13 @@ describe("TBP-238 kontrollu teslimat hatti", () => {
     releasePlani.komutlar = Object.fromEntries(
       Object.keys(releasePlani.komutlar).map((ad) => [ad, komut]),
     );
-    releasePlani.komutlar.stagingDeploy = [
+    releasePlani.komutlar.stagingArtifactVerify = [
       process.execPath,
       "-e",
-      "require('node:fs').writeFileSync(process.env.TBP_DEPLOYMENT_ATTESTATION_PATH, require('node:crypto').createHash('sha256').update(require('node:fs').readFileSync(process.env.TBP_ARTIFACT_PATH)).digest('hex'))",
+      "require('node:fs').writeFileSync(process.env.TBP_TARGET_ATTESTATION_PATH, JSON.stringify({artefaktSha256:require('node:crypto').createHash('sha256').update(require('node:fs').readFileSync(process.env.TBP_ARTIFACT_PATH)).digest('hex'),kilitKimligi:process.env.TBP_FENCE_TOKEN,fencingNesli:Number(process.env.TBP_FENCE_GENERATION),idempotencyAnahtari:process.env.TBP_IDEMPOTENCY_KEY}))",
+    ];
+    releasePlani.komutlar.productionArtifactVerify = [
+      ...releasePlani.komutlar.stagingArtifactVerify,
     ];
     writeFileSync(planYolu, JSON.stringify(releasePlani));
 
@@ -144,7 +180,26 @@ describe("TBP-238 kontrollu teslimat hatti", () => {
     ], { cwd: process.cwd(), encoding: "utf8" });
 
     assert.equal(stagingSonucu.status, 0, stagingSonucu.stderr);
-    assert.equal(JSON.parse(stagingSonucu.stdout).durum, "STAGING_DOGRULANDI");
+    const stagingCiktisi = JSON.parse(stagingSonucu.stdout);
+    assert.equal(stagingCiktisi.durum, "STAGING_DOGRULANDI");
+
+    releasePlani.insanOnayi = insanOnayiEkle(releasePlani, stagingCiktisi).insanOnayi;
+    writeFileSync(planYolu, JSON.stringify(releasePlani));
+    const onayAnahtarlariYolu = join(dizin, "approval-keys.json");
+    writeFileSync(onayAnahtarlariYolu, JSON.stringify(ONAY_ANAHTARLARI));
+    const productionSonucu = spawnSync(process.execPath, [
+      "src/teslimat-hatti-cli.mjs",
+      "production",
+      "--plan", planYolu,
+      "--database", depoYolu,
+      "--actor", "codex",
+      "--trace", "trace-cli-238-production",
+      "--correlation", "corr-cli-238-production",
+      "--approval-keys", onayAnahtarlariYolu,
+    ], { cwd: process.cwd(), encoding: "utf8" });
+
+    assert.equal(productionSonucu.status, 0, productionSonucu.stderr);
+    assert.equal(JSON.parse(productionSonucu.stdout).durum, "PRODUCTION_DOGRULANDI");
   });
 
   test("TEST-TBP-238-CANDIDATE-01 aday kapilarini sirayla gecirip immutable artefakti kaydeder", async () => {
@@ -259,6 +314,7 @@ describe("TBP-238 kontrollu teslimat hatti", () => {
     assert.equal(sonuc.durum, "STAGING_DOGRULANDI");
     assert.deepEqual(cagrilar, [
       "stagingDeploy",
+      "stagingArtifactVerify",
       "stagingSmoke",
       "stagingTelemetry",
     ]);
@@ -275,9 +331,14 @@ describe("TBP-238 kontrollu teslimat hatti", () => {
         cagrilar.push(ad);
         if (ad === "stagingDeploy") {
           dagitimYollari.push(komutBaglami.artefaktYolu);
+        }
+        if (ad === "stagingArtifactVerify") {
           return {
             cikisKodu: 0,
             dagitilanArtefaktSha256: komutBaglami.artefaktSha256,
+            kilitKimligi: komutBaglami.kilitKimligi,
+            fencingNesli: komutBaglami.fencingNesli,
+            idempotencyAnahtari: komutBaglami.idempotencyAnahtari,
           };
         }
         return { cikisKodu: 0 };
@@ -387,6 +448,36 @@ describe("TBP-238 kontrollu teslimat hatti", () => {
     hat.kapat();
   });
 
+  test("TEST-TBP-238-HUMAN-02 self-asserted Human Gate production yetkisi vermez", async () => {
+    const { artefaktYolu, depoYolu } = kurulum();
+    const cagrilar = [];
+    const hat = new TeslimatHatti({
+      depoYolu,
+      komutCalistir: basariliCalistirici(cagrilar),
+      onayAnahtarlari: ONAY_ANAHTARLARI,
+    });
+    const releasePlani = plan(artefaktYolu);
+    await hat.calistir("candidate", releasePlani, baglam());
+    const stagingSonucu = await hat.calistir("staging", releasePlani, baglam({
+      zamanDamgasi: "2026-10-08T10:05:00.000Z",
+    }));
+    cagrilar.length = 0;
+    const sahteOnay = insanOnayiEkle(releasePlani, stagingSonucu);
+    sahteOnay.insanOnayi = {
+      ...sahteOnay.insanOnayi,
+      imza: Buffer.alloc(64).toString("base64url"),
+    };
+
+    await assert.rejects(
+      hat.calistir("production", sahteOnay, baglam({
+        zamanDamgasi: "2026-10-08T10:10:00.000Z",
+      })),
+      (hata) => hata.kod === "RELEASE_HUMAN_GATE_UNTRUSTED",
+    );
+    assert.deepEqual(cagrilar, []);
+    hat.kapat();
+  });
+
   test("TEST-TBP-238-ROLLBACK-01 production smoke kirmiziysa rollback uygular ve basarili saymaz", async () => {
     const { artefaktYolu, depoYolu } = kurulum();
     const cagrilar = [];
@@ -395,6 +486,7 @@ describe("TBP-238 kontrollu teslimat hatti", () => {
       komutCalistir: basariliCalistirici(cagrilar, {
         productionSmoke: { cikisKodu: 2 },
       }),
+      onayAnahtarlari: ONAY_ANAHTARLARI,
     });
     const releasePlani = plan(artefaktYolu);
     await hat.calistir("candidate", releasePlani, baglam());
@@ -415,6 +507,7 @@ describe("TBP-238 kontrollu teslimat hatti", () => {
     assert.equal(sonuc.basariliMi, false);
     assert.deepEqual(cagrilar, [
       "productionDeploy",
+      "productionArtifactVerify",
       "productionSmoke",
       "rollback",
     ]);
@@ -431,6 +524,7 @@ describe("TBP-238 kontrollu teslimat hatti", () => {
     const hat = new TeslimatHatti({
       depoYolu,
       komutCalistir: basariliCalistirici(cagrilar),
+      onayAnahtarlari: ONAY_ANAHTARLARI,
     });
     const releasePlani = plan(artefaktYolu);
     await hat.calistir("candidate", releasePlani, baglam());
@@ -451,6 +545,7 @@ describe("TBP-238 kontrollu teslimat hatti", () => {
     assert.equal(sonuc.basariliMi, true);
     assert.deepEqual(cagrilar, [
       "productionDeploy",
+      "productionArtifactVerify",
       "productionSmoke",
       "productionTelemetry",
     ]);
@@ -471,6 +566,7 @@ describe("TBP-238 kontrollu teslimat hatti", () => {
         productionTelemetry: { cikisKodu: 4 },
         rollback: { cikisKodu: 5 },
       }),
+      onayAnahtarlari: ONAY_ANAHTARLARI,
     });
     const releasePlani = plan(artefaktYolu);
     await hat.calistir("candidate", releasePlani, baglam());
@@ -501,8 +597,13 @@ describe("TBP-238 kontrollu teslimat hatti", () => {
         if (ad === "stagingDeploy") await stagingBeklet;
         return {
           cikisKodu: 0,
-          ...(ad === "stagingDeploy"
-            ? { dagitilanArtefaktSha256: komutBaglami.artefaktSha256 }
+          ...(ad === "stagingArtifactVerify"
+            ? {
+              dagitilanArtefaktSha256: komutBaglami.artefaktSha256,
+              kilitKimligi: komutBaglami.kilitKimligi,
+              fencingNesli: komutBaglami.fencingNesli,
+              idempotencyAnahtari: komutBaglami.idempotencyAnahtari,
+            }
             : {}),
         };
       },
@@ -536,6 +637,7 @@ describe("TBP-238 kontrollu teslimat hatti", () => {
     let simdi = new Date("2026-10-08T10:00:00.000Z");
     let stagingSerbestBirak;
     let stagingBasladi;
+    const hedefOrtam = { fencingNesli: 0, durum: "ESKI_SURUM" };
     const stagingBeklet = new Promise((resolve) => { stagingSerbestBirak = resolve; });
     const stagingBaslangici = new Promise((resolve) => { stagingBasladi = resolve; });
     const releasePlani = plan(artefaktYolu);
@@ -548,11 +650,21 @@ describe("TBP-238 kontrollu teslimat hatti", () => {
         if (ad === "stagingDeploy") {
           stagingBasladi();
           await stagingBeklet;
+          if (komutBaglami.fencingNesli < hedefOrtam.fencingNesli) {
+            return { cikisKodu: 3 };
+          }
+          hedefOrtam.fencingNesli = komutBaglami.fencingNesli;
+          hedefOrtam.durum = "YENI_SURUM";
         }
         return {
           cikisKodu: 0,
-          ...(ad === "stagingDeploy"
-            ? { dagitilanArtefaktSha256: komutBaglami.artefaktSha256 }
+          ...(ad === "stagingArtifactVerify"
+            ? {
+              dagitilanArtefaktSha256: komutBaglami.artefaktSha256,
+              kilitKimligi: komutBaglami.kilitKimligi,
+              fencingNesli: komutBaglami.fencingNesli,
+              idempotencyAnahtari: komutBaglami.idempotencyAnahtari,
+            }
             : {}),
         };
       },
@@ -566,21 +678,38 @@ describe("TBP-238 kontrollu teslimat hatti", () => {
 
     const kurtarmaPlani = {
       ...releasePlani,
-      recoveryOnayi: {
+      recoveryOnayi: onayiImzala({
         kanitKimligi: "RECOVERY-HUMAN-GATE-238",
         onaylayanKimligi: "atlassian-712020",
         releaseKimligi: releasePlani.releaseKimligi,
         artefaktSha256: releasePlani.artefaktSha256,
-      },
+        ortam: "staging",
+        kilitNesli: 1,
+      }),
     };
+    let rollbackSerbestBirak;
+    let rollbackBasladi;
+    const rollbackBeklet = new Promise((resolve) => { rollbackSerbestBirak = resolve; });
+    const rollbackBaslangici = new Promise((resolve) => { rollbackBasladi = resolve; });
     const kurtarmaHatti = new TeslimatHatti({
       depoYolu,
       saat: () => new Date(simdi),
       leaseSuresiMs: 30_000,
-      heartbeatAraligiMs: 10_000,
-      komutCalistir: basariliCalistirici([]),
+      heartbeatAraligiMs: 100,
+      komutCalistir: async (ad, _komut, komutBaglami) => {
+        if (ad === "rollback") {
+          assert.equal(komutBaglami.idempotencyAnahtari, "release-2026.10.08.1:staging:rollback");
+          assert.equal(komutBaglami.fencingNesli, 2);
+          rollbackBasladi();
+          await rollbackBeklet;
+          hedefOrtam.fencingNesli = komutBaglami.fencingNesli;
+          hedefOrtam.durum = "ROLLBACK";
+        }
+        return { cikisKodu: 0 };
+      },
+      onayAnahtarlari: ONAY_ANAHTARLARI,
     });
-    const kurtarmaSonucu = await kurtarmaHatti.calistir(
+    const kurtarmaIslemi = kurtarmaHatti.calistir(
       "recovery",
       kurtarmaPlani,
       baglam({
@@ -588,6 +717,38 @@ describe("TBP-238 kontrollu teslimat hatti", () => {
         zamanDamgasi: "2026-10-08T10:00:32.000Z",
       }),
     );
+    await rollbackBaslangici;
+    simdi = new Date("2026-10-08T10:00:50.000Z");
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    simdi = new Date("2026-10-08T10:01:03.000Z");
+    const ikinciKurtarmaPlani = {
+      ...releasePlani,
+      recoveryOnayi: onayiImzala({
+        kanitKimligi: "RECOVERY-HUMAN-GATE-238-SECOND",
+        onaylayanKimligi: "atlassian-712020",
+        releaseKimligi: releasePlani.releaseKimligi,
+        artefaktSha256: releasePlani.artefaktSha256,
+        ortam: "staging",
+        kilitNesli: 2,
+      }),
+    };
+    const ikinciKurtarmaHatti = new TeslimatHatti({
+      depoYolu,
+      saat: () => new Date(simdi),
+      leaseSuresiMs: 30_000,
+      heartbeatAraligiMs: 100,
+      komutCalistir: basariliCalistirici([]),
+      onayAnahtarlari: ONAY_ANAHTARLARI,
+    });
+    await assert.rejects(
+      ikinciKurtarmaHatti.calistir("recovery", ikinciKurtarmaPlani, baglam({
+        calistirici: "ship.sh-recovery-2",
+        zamanDamgasi: "2026-10-08T10:01:03.000Z",
+      })),
+      (hata) => hata.kod === "RELEASE_DEPLOYMENT_LOCKED",
+    );
+    rollbackSerbestBirak();
+    const kurtarmaSonucu = await kurtarmaIslemi;
 
     assert.equal(kurtarmaSonucu.durum, "STAGING_ENGELLENDI");
     assert.equal(kurtarmaSonucu.basariliMi, false);
@@ -596,9 +757,36 @@ describe("TBP-238 kontrollu teslimat hatti", () => {
       eskiDagitim,
       (hata) => hata.kod === "RELEASE_DEPLOYMENT_FENCE_LOST",
     );
+    assert.deepEqual(hedefOrtam, { fencingNesli: 2, durum: "ROLLBACK" });
     assert.equal(kurtarmaHatti.releaseGetir(releasePlani.releaseKimligi).durum, "STAGING_ENGELLENDI");
     ilkHat.kapat();
     kurtarmaHatti.kapat();
+    ikinciKurtarmaHatti.kapat();
+  });
+
+  test("TEST-TBP-238-FENCE-01 fencing nesli tamamlanan release'ler arasinda da monoton artar", async () => {
+    const { artefaktYolu, depoYolu } = kurulum();
+    const nesiller = [];
+    const hat = new TeslimatHatti({
+      depoYolu,
+      komutCalistir: async (ad, _komut, komutBaglami) => {
+        if (ad === "stagingDeploy") nesiller.push(komutBaglami.fencingNesli);
+        return basariliCalistirici([])(ad, _komut, komutBaglami);
+      },
+    });
+    const ilkPlan = plan(artefaktYolu);
+    const ikinciPlan = plan(artefaktYolu, {
+      releaseKimligi: "release-2026.10.08.2",
+      commitKimligi: "86ed8a8",
+    });
+
+    await hat.calistir("candidate", ilkPlan, baglam());
+    await hat.calistir("staging", ilkPlan, baglam());
+    await hat.calistir("candidate", ikinciPlan, baglam());
+    await hat.calistir("staging", ikinciPlan, baglam());
+
+    assert.deepEqual(nesiller, [1, 2]);
+    hat.kapat();
   });
 
   test("TEST-TBP-238-AUDIT-01 release audit kayitlari degistirilemez ve silinemez", async () => {

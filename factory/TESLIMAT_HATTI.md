@@ -11,18 +11,24 @@ SQLite audit kaydina yazmaz.
 ```bash
 ./ship.sh candidate --plan release-plan.json --database /guvenli/state/ship.sqlite --actor operator
 ./ship.sh staging --plan release-plan.json --database /guvenli/state/ship.sqlite --actor operator
-./ship.sh production --plan release-plan.json --database /guvenli/state/ship.sqlite --actor operator
-./ship.sh recovery --plan recovery-plan.json --database /guvenli/state/ship.sqlite --actor operator
+./ship.sh production --plan release-plan.json --database /guvenli/state/ship.sqlite --actor operator --approval-keys /guvenli/config/human-gate-keys.json
+./ship.sh recovery --plan recovery-plan.json --database /guvenli/state/ship.sqlite --actor operator --approval-keys /guvenli/config/human-gate-keys.json
 ```
 
 `--trace` ve `--correlation` verilmezse CLI yeni kimlik uretir. Plan dosyasi
 trusted operasyon girdisidir ve review edilmeden dis kaynaktan alinmaz; listedeki
 komutlar gercek surec olarak calistirilir. Her komuta `TBP_RELEASE_ID`,
 `TBP_DEPLOYMENT_ENVIRONMENT`, `TBP_TRACE_ID`, `TBP_CORRELATION_ID`,
-`TBP_ARTIFACT_PATH` ve `TBP_ARTIFACT_SHA256` aktarilir. Deploy komutu ayrica
-gercekte uyguladigi artefaktin SHA-256 ozetini
-`TBP_DEPLOYMENT_ATTESTATION_PATH` dosyasina yazmalidir; eksik veya farkli ozet
-kapinin kapanmasina neden olur.
+`TBP_ARTIFACT_PATH` ve `TBP_ARTIFACT_SHA256` aktarilir. Deployment ve rollback
+komutlarina ayrica `TBP_FENCE_TOKEN`, `TBP_FENCE_GENERATION` ve intent tabanli
+`TBP_IDEMPOTENCY_KEY` verilir. Hedef sistem adaptoru fence neslini hedefte
+atomik olarak uygulamali, daha eski nesilleri reddetmeli ve ayni idempotency
+anahtarini ikinci kez etkilememelidir.
+
+Deploy'dan ayri `*ArtifactVerify` komutu hedef sistemden gercek SHA-256/version
+bilgisini okumali ve `TBP_TARGET_ATTESTATION_PATH` dosyasina
+`artefaktSha256`, `kilitKimligi`, `fencingNesli` ve `idempotencyAnahtari`
+alanlarini iceren JSON yazmalidir. Deploy komutunun kendi beyanı kanit sayilmaz.
 
 ## Sabit kapi sirasi
 
@@ -36,13 +42,14 @@ versionBuild -> sbomDependencySecurity -> migrationsDryRun -> fullTest
 Staging:
 
 ```text
-stagingDeploy -> stagingSmoke -> stagingTelemetry
+stagingDeploy -> stagingArtifactVerify -> stagingSmoke -> stagingTelemetry
 ```
 
 Production:
 
 ```text
-Human Gate -> productionDeploy -> productionSmoke -> productionTelemetry
+Human Gate -> productionDeploy -> productionArtifactVerify
+-> productionSmoke -> productionTelemetry
 ```
 
 Bir kapinin sifirdan farkli cikis kodu sonraki kapiyi calistirmaz. Production
@@ -60,16 +67,23 @@ Plan su alanlari tasir:
 - `imzaKimligi`, `dagitimStratejisi` (`CANARY`, `ROLLING`, `RECREATE`);
 - `migrationPlani`: dry-run, forward ve rollback kanit kimlikleri;
 - `backupRestoreKanitKimligi`;
-- production icin `insanOnayi`: kanit, onaylayan, release, artefakt ve staging
-  kanit kimliklerini birlikte tasiyan nesne;
+- production icin `insanOnayi`: kanit, onaylayan, release, artefakt, staging,
+  ortam, guvenilir anahtar kimligi ve Ed25519 imzasini birlikte tasiyan nesne;
 - crash recovery icin `recoveryOnayi`: kanit, onaylayan, release ve artefakt
-  kimliklerini birlikte tasiyan nesne;
+  kimliklerine ek olarak ortam, devralinacak lock nesli, anahtar kimligi ve
+  Ed25519 imzasini tasiyan nesne;
 - `komutlar`: her sabit kapi adi icin executable ve argumanlardan olusan dizi.
 
 Ornek komut bicimi `{"fullTest":["npm","test"]}` seklindedir. `&&`, pipe,
 redirect veya command substitution yorumlanmaz. Platforma ozel gercek deploy,
 smoke, telemetry ve rollback komutlari bu planda acikca verilmeden release
 ilerlemez.
+
+`--approval-keys` dosyasi planin disindaki trust anchor'dir. JSON nesnesinde her
+anahtar kimligi icin `onaylayanKimligi` ve `publicKeyPem` bulunur. Onay imzasi,
+`humanGateImzaMetniOlustur` tarafindan uretilen kanonik UTF-8 metin uzerinden
+Ed25519 ile uretilir. Plan icine public key koymak veya yalniz onaylayan adini
+yazmak yetki vermez.
 
 ## Guvenlik ve recovery
 
@@ -79,14 +93,18 @@ ilerlemez.
 - Ayni release kimligi farkli manifest veya komut planiyla tekrar kullanilamaz.
   Komut plani ozeti candidate kaydinin immutable parcasidir.
 - Human Gate kayitlari append-only tutulur. Production onayi release, artefakt,
-  staging kaniti ve onaylayan kimligine baglidir; serbest metin onay sayilmaz.
+  staging kaniti, ortam ve onaylayan kimligine; recovery onayi ayrica stale lock
+  nesline baglidir. Guvenilir trust anchor ile dogrulanmayan serbest metin veya
+  self-asserted kimlik onay sayilmaz.
 - Staging ve production ortamlari lease, heartbeat ve monoton fencing token
-  iceren kalici deployment lock ile korunur. Suresi dolmus veya devralinmis bir
-  calistirici release durumunu ilerletemez.
+  iceren kalici deployment lock ile korunur. Fence ve idempotency degerleri dis
+  hedef adaptoru sozlesmesinin parcasidir; suresi dolmus veya devralinmis bir
+  calistirici ne release durumunu ne de hedef sistem etkisini ilerletebilir.
 - Normal hata ve sinyalde lock `finally` ile birakilir. Ani process/host kaybinda
   lease dolana kadar akis fail-closed kalir. Sonrasinda yalniz `recoveryOnayi`
-  bulunan `recovery` komutu stale lock'i devralip idempotent rollback calistirir;
-  DB elle degistirilmez. Rollback basarisizsa durum `INCIDENT_ACIK` olur.
+  bulunan `recovery` komutu stale lock'i devralip heartbeat altinda idempotent
+  rollback calistirir; DB elle degistirilmez. Rollback basarisizsa durum
+  `INCIDENT_ACIK` olur.
 - Release audit update/delete trigger'lariyla immutable'dir; trace, correlation,
   Jira, commit, release ve artifact referanslari birlikte tutulur.
 - Migration dry-run, backup/restore hazirligi, forward ve rollback planlari bos
