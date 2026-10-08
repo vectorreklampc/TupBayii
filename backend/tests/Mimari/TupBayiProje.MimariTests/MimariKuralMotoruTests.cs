@@ -103,4 +103,22 @@ public sealed class MimariKuralMotoruTests
 
         Assert.Contains(ihlaller, ihlal => ihlal.Contains("tenant operasyon", StringComparison.OrdinalIgnoreCase));
     }
+
+    [Theory]
+    [InlineData("KasaHareketi")]
+    [InlineData("TupHareketi")]
+    [InlineData("Tedarikci")]
+    public void VeritabaniSinirlariniDogrula_MasterJiradaYasakOperasyonVarliginiReddeder(string varlikAdi)
+    {
+        var proje = new VeritabaniProjesiTanim(
+            "Tenancy.Altyapi",
+            VeritabaniSiniri.Master,
+            TenantBasinaFizikselVeritabani: false,
+            ["TenancyMasterVeritabaniBaglami"],
+            [varlikAdi]);
+
+        var ihlaller = MimariKuralMotoru.VeritabaniSinirlariniDogrula([proje]);
+
+        Assert.Contains(ihlaller, ihlal => ihlal.Contains(varlikAdi, StringComparison.Ordinal));
+    }
 }
