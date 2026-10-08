@@ -42,7 +42,10 @@ Master ve Tenant baglamlari ayni projede bulunamaz. Baglam adlari sirasiyla
 `*MasterVeritabaniBaglami` ve `*TenantVeritabaniBaglami` son ekini kullanir.
 Master baglamindaki `DbSet<T>` ve `Entity<T>` kayitlari da SOT'taki sinira
 gore taranir; `Musteri`, `Urun`, `Fiyat`, `Satis`, `Siparis`, `Stok`, `Cari`,
-`Teslimat` ve `Depo` koklu tenant operasyon varliklari reddedilir.
+`Teslimat`, `Depo`, `Kasa`, `Tup` ve `Tedarikci` koklu tenant operasyon
+varliklari reddedilir. Bu ad-koku korumasi Master schema whitelist'i
+degildir; yeni/yeniden adlandirilmis varliklari eksiksiz saptamak icin
+TBP-58'in kesin entity envanteri ve EF model testi gereklidir.
 
 ## Calistirma
 

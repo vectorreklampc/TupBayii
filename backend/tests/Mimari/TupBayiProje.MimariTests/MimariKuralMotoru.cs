@@ -45,6 +45,9 @@ internal static class MimariKuralMotoru
         "Cari",
         "Teslimat",
         "Depo",
+        "Kasa",
+        "Tup",
+        "Tedarikci",
     ];
 
     public static IReadOnlyList<string> ProjeBagimliliklariniDogrula(
