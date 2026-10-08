@@ -13,6 +13,7 @@ import {
   TeslimatHattiHatasi,
   humanGateImzaMetniOlustur,
 } from "../src/teslimat-hatti.mjs";
+import { windowsAclGuvenliMi } from "../src/human-gate-trust-store.mjs";
 
 const { privateKey: onayOzelAnahtari, publicKey: onayAcikAnahtari } =
   generateKeyPairSync("ed25519");
@@ -467,6 +468,29 @@ describe("TBP-238 kontrollu teslimat hatti", () => {
     );
     assert.deepEqual(cagrilar, []);
     hat.kapat();
+  });
+
+  test("TEST-TBP-238-HUMAN-03 Windows trust store ACL operator yazmasina fail-closed kalir", () => {
+    const guvenliAcl = {
+      sahipSid: "S-1-5-32-544",
+      korumaliMi: true,
+      kurallar: [
+        { sid: "S-1-5-18", tur: "Allow", haklar: 2_032_127 },
+        { sid: "S-1-5-32-544", tur: "Allow", haklar: 2_032_127 },
+        { sid: "S-1-5-32-545", tur: "Allow", haklar: 131_241 },
+      ],
+    };
+
+    assert.equal(windowsAclGuvenliMi(guvenliAcl), true);
+    assert.equal(windowsAclGuvenliMi({
+      ...guvenliAcl,
+      kurallar: [
+        ...guvenliAcl.kurallar,
+        { sid: "S-1-5-32-545", tur: "Allow", haklar: 2 },
+      ],
+    }), false);
+    assert.equal(windowsAclGuvenliMi({ ...guvenliAcl, korumaliMi: false }), false);
+    assert.equal(windowsAclGuvenliMi({ ...guvenliAcl, sahipSid: "S-1-5-32-545" }), false);
   });
 
   test("TEST-TBP-238-ROLLBACK-01 production smoke kirmiziysa rollback uygular ve basarili saymaz", async () => {

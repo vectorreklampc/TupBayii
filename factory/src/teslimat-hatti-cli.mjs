@@ -1,17 +1,15 @@
 #!/usr/bin/env node
 
 import { randomUUID } from "node:crypto";
-import { lstatSync, mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
+import { lstatSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { spawn } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
 import { TeslimatHatti, TeslimatHattiHatasi } from "./teslimat-hatti.mjs";
+import { onayTrustStoreOku } from "./human-gate-trust-store.mjs";
 
 const [asama, ...secenekler] = process.argv.slice(2);
-const ONAY_TRUST_STORE_YOLU = process.platform === "win32"
-  ? "C:\\ProgramData\\TupBayiProje\\human-gate-keys.json"
-  : "/etc/tupbayiproje/human-gate-keys.json";
 
 try {
   const girdiler = secenekleriOku(secenekler);
@@ -68,15 +66,6 @@ function secenekleriOku(secenekler) {
     }
   }
   return sonuc;
-}
-
-function onayTrustStoreOku() {
-  const dosya = statSync(ONAY_TRUST_STORE_YOLU);
-  if (!dosya.isFile()) throw new Error("Human Gate trust store normal dosya olmalidir.");
-  if (process.platform !== "win32" && (dosya.uid !== 0 || (dosya.mode & 0o022) !== 0)) {
-    throw new Error("Human Gate trust store root sahipli ve grup/dunya yazmasina kapali olmalidir.");
-  }
-  return JSON.parse(readFileSync(ONAY_TRUST_STORE_YOLU, "utf8"));
 }
 
 async function komutCalistir(ad, komut, baglam) {

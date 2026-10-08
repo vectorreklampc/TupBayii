@@ -83,11 +83,15 @@ Human Gate trust store planin ve CLI argumanlarinin disindadir. Yolu Windows'ta
 `C:\ProgramData\TupBayiProje\human-gate-keys.json`, Linux/macOS'ta
 `/etc/tupbayiproje/human-gate-keys.json` olarak sabittir. Dosya deployment
 yoneticisi tarafindan provision edilir; uygulama/operator hesabi yazamaz.
-POSIX'te root sahipligi ile grup/dunya yazma izinleri de calisma aninda
-dogrulanir. JSON nesnesinde her anahtar kimligi icin `onaylayanKimligi` ve
-`publicKeyPem` bulunur. Onay imzasi, `humanGateImzaMetniOlustur` tarafindan
-uretilen kanonik UTF-8 metin uzerinden Ed25519 ile uretilir. Plan icine public
-key koymak veya cagri sirasinda baska trust store secmek yetki vermez.
+POSIX'te ust dizin ve dosya icin root sahipligi ile grup/dunya yazma izinleri
+dogrulanir. Windows'ta hem dizin hem dosya DACL inheritance'i kapali olmali;
+owner SYSTEM, Administrators veya TrustedInstaller olmali ve yalniz bu SID'ler
+yazma/ACL/ownership hakki tasimalidir. ACL okunamaz veya belirsizse production
+fail-closed kalir. JSON nesnesinde her anahtar kimligi icin
+`onaylayanKimligi` ve `publicKeyPem` bulunur. Onay imzasi,
+`humanGateImzaMetniOlustur` tarafindan uretilen kanonik UTF-8 metin uzerinden
+Ed25519 ile uretilir. Plan icine public key koymak veya cagri sirasinda baska
+trust store secmek yetki vermez.
 
 ## Guvenlik ve recovery
 
