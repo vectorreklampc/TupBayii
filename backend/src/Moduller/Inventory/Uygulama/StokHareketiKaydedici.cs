@@ -67,6 +67,12 @@ public sealed class StokHareketiKaydedici(
                     false,
                     hareket.HareketKimligi,
                     "STOK_HAREKETI_IDEMPOTENCY_CONFLICT"),
+            StokHareketiDepoSonucu.HareketKimligiConflict =>
+                new StokHareketiKaydetSonucu(
+                    false,
+                    false,
+                    hareket.HareketKimligi,
+                    "STOK_HAREKETI_KIMLIGI_CONFLICT"),
             StokHareketiDepoSonucu.KaynakStokYetersiz =>
                 new StokHareketiKaydetSonucu(
                     false,

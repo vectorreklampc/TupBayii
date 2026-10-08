@@ -14,6 +14,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\Moduller\Inventory\Domain\TupBayiProje.Moduller.Inventory.Domain.csproj" />
+    <ProjectReference Include="..\..\..\src\Moduller\Inventory\Altyapi\TupBayiProje.Moduller.Inventory.Altyapi.csproj" />
     <ProjectReference Include="..\..\..\src\Moduller\Inventory\Uygulama\TupBayiProje.Moduller.Inventory.Uygulama.csproj" />
     <ProjectReference Include="..\..\..\src\Moduller\Inventory\Sozlesmeler\TupBayiProje.Moduller.Inventory.Sozlesmeler.csproj" />
     <ProjectReference Include="..\..\..\src\Moduller\Inventory\Sunum\TupBayiProje.Moduller.Inventory.Sunum.csproj" />

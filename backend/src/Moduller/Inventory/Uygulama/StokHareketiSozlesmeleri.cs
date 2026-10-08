@@ -46,6 +46,7 @@ public enum StokHareketiDepoSonucu
     Kaydedildi,
     Tekrar,
     IdempotencyConflict,
+    HareketKimligiConflict,
     KaynakStokYetersiz,
 }
 

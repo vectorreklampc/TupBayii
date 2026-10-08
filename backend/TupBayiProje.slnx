@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/Moduller/Inventory/">
+    <Project Path="src/Moduller/Inventory/Altyapi/TupBayiProje.Moduller.Inventory.Altyapi.csproj" />
     <Project Path="src/Moduller/Inventory/Domain/TupBayiProje.Moduller.Inventory.Domain.csproj" />
     <Project Path="src/Moduller/Inventory/Sozlesmeler/TupBayiProje.Moduller.Inventory.Sozlesmeler.csproj" />
     <Project Path="src/Moduller/Inventory/Sunum/TupBayiProje.Moduller.Inventory.Sunum.csproj" />
