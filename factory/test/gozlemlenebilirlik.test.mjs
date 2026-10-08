@@ -119,6 +119,18 @@ describe("Vendor bagimsiz telemetry kaydi", () => {
           && hata.kod === "TELEMETRY_FIELD_NOT_ALLOWED",
       );
     }
+    for (const tehlikeliDeger of [
+      { olayAdi: "password=gizli" },
+      { bilesen: "kisi@example.com" },
+      { sonucKodu: "HATA kart 4111111111111111" },
+      { traceKimligi: "trace\nyeni-satir" },
+    ]) {
+      assert.throws(
+        () => depo.kaydet({ ...kayit(), ...tehlikeliDeger }),
+        (hata) => hata instanceof GozlemlenebilirlikHatasi
+          && hata.kod === "TELEMETRY_FIELD_INVALID",
+      );
+    }
     depo.kapat();
   });
 
@@ -281,6 +293,29 @@ describe("Canli hata geri besleme dongusu", () => {
       invariantKimlikleri: ["INV-GOV-001"],
     });
 
+    assert.throws(
+      () => depo.geriBeslemeGecisiUygula({
+        paketKimligi: paket.paketKimligi,
+        hedefDurum: CANLI_HATA_DURUMLARI.BAGIMSIZ_TEST_GECTI,
+        kanitKimligi: "TEST-TBP-239-FIX-01",
+      }),
+      (hata) => hata.kod === "FEEDBACK_TRANSITION_INVALID",
+    );
+    depo.geriBeslemeGecisiUygula({
+      paketKimligi: paket.paketKimligi,
+      hedefDurum: CANLI_HATA_DURUMLARI.JIRA_BUG_OLUSTURULDU,
+      kanitKimligi: "TBP-999",
+    });
+    depo.geriBeslemeGecisiUygula({
+      paketKimligi: paket.paketKimligi,
+      hedefDurum: CANLI_HATA_DURUMLARI.RISK_INVARIANT_KONTROLU_GECTI,
+      kanitKimligi: "GATE-TBP-999-01",
+    });
+    depo.geriBeslemeGecisiUygula({
+      paketKimligi: paket.paketKimligi,
+      hedefDurum: CANLI_HATA_DURUMLARI.DUZELTME_UYGULANDI,
+      kanitKimligi: "COMMIT-ABCDEF1",
+    });
     depo.geriBeslemeGecisiUygula({
       paketKimligi: paket.paketKimligi,
       hedefDurum: CANLI_HATA_DURUMLARI.BAGIMSIZ_TEST_GECTI,
@@ -322,6 +357,9 @@ describe("Canli hata geri besleme dongusu", () => {
       depo.geriBeslemeDenetiminiListele(paket.paketKimligi).map(({ hedefDurum }) => hedefDurum),
       [
         CANLI_HATA_DURUMLARI.JIRA_BUG_HAZIR,
+        CANLI_HATA_DURUMLARI.JIRA_BUG_OLUSTURULDU,
+        CANLI_HATA_DURUMLARI.RISK_INVARIANT_KONTROLU_GECTI,
+        CANLI_HATA_DURUMLARI.DUZELTME_UYGULANDI,
         CANLI_HATA_DURUMLARI.BAGIMSIZ_TEST_GECTI,
         CANLI_HATA_DURUMLARI.CODEX_ONAYLADI,
         CANLI_HATA_DURUMLARI.STAGING_SMOKE_GECTI,

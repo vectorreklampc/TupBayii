@@ -19,6 +19,10 @@ Her telemetry olayi sabit alan listesiyle kaydedilir. `traceKimligi`,
 parent span kaydindan once yazilamaz. Kayitlar update/delete trigger'lariyla
 immutable'dir. Request body, serbest metadata, token, e-posta ve benzeri
 allowlist disi alanlar fail-closed reddedilir.
+Allowlist alanlarinin degerleri de serbest metin degildir: olay adi ve sonuc
+kodu kanonik kod bicimi; component, span ve referanslar sinirli makine kimligi
+bicimi tasir. Boylece alan adi dogru gorunen bir deger icine request metni,
+e-posta veya secret gomulemez.
 
 `redOzetiGetir`, yalniz dusuk-cardinality `bilesen` ve `islem` boyutlarinda
 request count, error ratio ve percentile latency uretir. `traceId`, kullanici,
@@ -34,8 +38,10 @@ olarak dogrulanir; bilinmeyen alan, eksik `TEST-*` reproducer veya eksik
 `INV-*` eslemesi reddedilir. Ardindan kalici akis su kanitli sirayi zorlar:
 
 ```text
-JIRA_BUG_HAZIR -> BAGIMSIZ_TEST_GECTI -> CODEX_ONAYLADI
--> STAGING_SMOKE_GECTI -> [INSAN_ONAYI_VERILDI] -> PRODUCTION_DOGRULANDI
+JIRA_BUG_HAZIR -> JIRA_BUG_OLUSTURULDU
+-> RISK_INVARIANT_KONTROLU_GECTI -> DUZELTME_UYGULANDI
+-> BAGIMSIZ_TEST_GECTI -> CODEX_ONAYLADI -> STAGING_SMOKE_GECTI
+-> [INSAN_ONAYI_VERILDI] -> PRODUCTION_DOGRULANDI
 ```
 
 Koseli adim risk motorunun Human Gate gerektirdigi duzeltmelerde zorunludur.

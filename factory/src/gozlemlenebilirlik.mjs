@@ -6,6 +6,9 @@ import { riskiDegerlendir } from "./risk-degerlendirme-motoru.mjs";
 export const CANLI_HATA_DURUMLARI = Object.freeze({
   PAKETLENDI: "PAKETLENDI",
   JIRA_BUG_HAZIR: "JIRA_BUG_HAZIR",
+  JIRA_BUG_OLUSTURULDU: "JIRA_BUG_OLUSTURULDU",
+  RISK_INVARIANT_KONTROLU_GECTI: "RISK_INVARIANT_KONTROLU_GECTI",
+  DUZELTME_UYGULANDI: "DUZELTME_UYGULANDI",
   BAGIMSIZ_TEST_GECTI: "BAGIMSIZ_TEST_GECTI",
   CODEX_ONAYLADI: "CODEX_ONAYLADI",
   STAGING_SMOKE_GECTI: "STAGING_SMOKE_GECTI",
@@ -39,6 +42,9 @@ const SEVIYELER = new Set(["DEBUG", "INFO", "WARN", "ERROR"]);
 const JIRA_KIMLIGI = /^TBP-[1-9][0-9]*$/;
 const TEST_KIMLIGI = /^TEST-[A-Z0-9][A-Z0-9-]*$/;
 const INVARIANT_KIMLIGI = /^INV-[A-Z0-9][A-Z0-9-]*$/;
+const MAKINE_KIMLIGI = /^[A-Za-z0-9][A-Za-z0-9._:-]*$/;
+const OLAY_ADI = /^[a-z][a-z0-9_]*$/;
+const SONUC_KODU = /^[A-Z][A-Z0-9_]*$/;
 const TRIAGE_ALANLARI = new Set([
   "paketKimligi",
   "ozet",
@@ -49,6 +55,15 @@ const TRIAGE_ALANLARI = new Set([
 
 const GECISLER = new Map([
   [CANLI_HATA_DURUMLARI.JIRA_BUG_HAZIR, new Set([
+    CANLI_HATA_DURUMLARI.JIRA_BUG_OLUSTURULDU,
+  ])],
+  [CANLI_HATA_DURUMLARI.JIRA_BUG_OLUSTURULDU, new Set([
+    CANLI_HATA_DURUMLARI.RISK_INVARIANT_KONTROLU_GECTI,
+  ])],
+  [CANLI_HATA_DURUMLARI.RISK_INVARIANT_KONTROLU_GECTI, new Set([
+    CANLI_HATA_DURUMLARI.DUZELTME_UYGULANDI,
+  ])],
+  [CANLI_HATA_DURUMLARI.DUZELTME_UYGULANDI, new Set([
     CANLI_HATA_DURUMLARI.BAGIMSIZ_TEST_GECTI,
   ])],
   [CANLI_HATA_DURUMLARI.BAGIMSIZ_TEST_GECTI, new Set([
@@ -86,48 +101,55 @@ export class GozlemlenebilirlikDeposu {
 
   kaydet(girdi) {
     const kayit = telemetryDogrula(girdi);
-    if (this.#olayVarMi(kayit.olayKimligi)) {
-      throw new GozlemlenebilirlikHatasi(
-        "TELEMETRY_EVENT_DUPLICATE",
-        "Telemetry olayi daha once kaydedilmis.",
-      );
-    }
-    if (kayit.ustSpanKimligi && !this.#spanVarMi(kayit.traceKimligi, kayit.ustSpanKimligi)) {
-      throw new GozlemlenebilirlikHatasi(
-        "TELEMETRY_PARENT_SPAN_NOT_FOUND",
-        "Ust span ayni trace icinde bulunamadi.",
-      );
-    }
+    this.#veritabani.exec("BEGIN IMMEDIATE");
+    try {
+      if (this.#olayVarMi(kayit.olayKimligi)) {
+        throw new GozlemlenebilirlikHatasi(
+          "TELEMETRY_EVENT_DUPLICATE",
+          "Telemetry olayi daha once kaydedilmis.",
+        );
+      }
+      if (kayit.ustSpanKimligi && !this.#spanVarMi(kayit.traceKimligi, kayit.ustSpanKimligi)) {
+        throw new GozlemlenebilirlikHatasi(
+          "TELEMETRY_PARENT_SPAN_NOT_FOUND",
+          "Ust span ayni trace icinde bulunamadi.",
+        );
+      }
 
-    this.#veritabani.prepare(`
-      INSERT INTO telemetry_kayitlari (
-        olay_kimligi, sinyal_turu, olay_adi, seviye, bilesen, giris_noktasi,
-        islem, sonuc_kodu, trace_kimligi, span_kimligi, ust_span_kimligi,
-        korelasyon_kimligi, neden_kimligi, is_anahtari, release_kimligi,
-        commit_kimligi, deployment_kimligi, sure_milisaniye, zaman_damgasi
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      kayit.olayKimligi,
-      kayit.sinyalTuru,
-      kayit.olayAdi,
-      kayit.seviye,
-      kayit.bilesen,
-      kayit.girisNoktasi,
-      kayit.islem,
-      kayit.sonucKodu,
-      kayit.traceKimligi,
-      kayit.spanKimligi,
-      kayit.ustSpanKimligi,
-      kayit.korelasyonKimligi,
-      kayit.nedenKimligi,
-      kayit.isAnahtari,
-      kayit.releaseKimligi,
-      kayit.commitKimligi,
-      kayit.deploymentKimligi,
-      kayit.sureMilisaniye,
-      kayit.zamanDamgasi,
-    );
-    return { ...kayit };
+      this.#veritabani.prepare(`
+        INSERT INTO telemetry_kayitlari (
+          olay_kimligi, sinyal_turu, olay_adi, seviye, bilesen, giris_noktasi,
+          islem, sonuc_kodu, trace_kimligi, span_kimligi, ust_span_kimligi,
+          korelasyon_kimligi, neden_kimligi, is_anahtari, release_kimligi,
+          commit_kimligi, deployment_kimligi, sure_milisaniye, zaman_damgasi
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        kayit.olayKimligi,
+        kayit.sinyalTuru,
+        kayit.olayAdi,
+        kayit.seviye,
+        kayit.bilesen,
+        kayit.girisNoktasi,
+        kayit.islem,
+        kayit.sonucKodu,
+        kayit.traceKimligi,
+        kayit.spanKimligi,
+        kayit.ustSpanKimligi,
+        kayit.korelasyonKimligi,
+        kayit.nedenKimligi,
+        kayit.isAnahtari,
+        kayit.releaseKimligi,
+        kayit.commitKimligi,
+        kayit.deploymentKimligi,
+        kayit.sureMilisaniye,
+        kayit.zamanDamgasi,
+      );
+      this.#veritabani.exec("COMMIT");
+      return { ...kayit };
+    } catch (hata) {
+      if (this.#veritabani.isTransaction) this.#veritabani.exec("ROLLBACK");
+      throw hata;
+    }
   }
 
   izGetir(traceKimligi) {
@@ -252,28 +274,27 @@ export class GozlemlenebilirlikDeposu {
 
   triageKaydet(girdi) {
     const triage = triageDogrula(girdi);
-    const paket = this.#paketSatiriGetir(triage.paketKimligi);
-    if (!paket || paket.durum !== CANLI_HATA_DURUMLARI.PAKETLENDI) {
-      throw new GozlemlenebilirlikHatasi(
-        "FEEDBACK_PACKAGE_NOT_READY",
-        "Diagnostic bundle triage icin hazir degil.",
-      );
-    }
-    const risk = riskiDegerlendir({
-      baslik: triage.ozet,
-      aciklama: "Canli hata duzeltmesi uygulanacak.",
-      etiketler: triage.riskEtiketleri,
-    });
-    const jiraTaslagi = {
-      kaynakTraceKimligi: paket.trace_kimligi,
-      ozet: triage.ozet,
-      yenidenUretmeTestKimligi: triage.yenidenUretmeTestKimligi,
-      riskEtiketleri: triage.riskEtiketleri,
-      invariantKimlikleri: triage.invariantKimlikleri,
-    };
-
     this.#veritabani.exec("BEGIN IMMEDIATE");
     try {
+      const paket = this.#paketSatiriGetir(triage.paketKimligi);
+      if (!paket || paket.durum !== CANLI_HATA_DURUMLARI.PAKETLENDI) {
+        throw new GozlemlenebilirlikHatasi(
+          "FEEDBACK_PACKAGE_NOT_READY",
+          "Diagnostic bundle triage icin hazir degil.",
+        );
+      }
+      const risk = riskiDegerlendir({
+        baslik: triage.ozet,
+        aciklama: "Canli hata duzeltmesi uygulanacak.",
+        etiketler: triage.riskEtiketleri,
+      });
+      const jiraTaslagi = {
+        kaynakTraceKimligi: paket.trace_kimligi,
+        ozet: triage.ozet,
+        yenidenUretmeTestKimligi: triage.yenidenUretmeTestKimligi,
+        riskEtiketleri: triage.riskEtiketleri,
+        invariantKimlikleri: triage.invariantKimlikleri,
+      };
       this.#veritabani.prepare(`
         UPDATE canli_hata_paketleri
         SET durum = ?, jira_taslagi = ?, insan_kapisi_gerekli = ?
@@ -300,28 +321,28 @@ export class GozlemlenebilirlikDeposu {
 
   geriBeslemeGecisiUygula(girdi) {
     gecisDogrula(girdi);
-    const paket = this.#paketSatiriGetir(girdi.paketKimligi);
-    if (!paket) {
-      throw new GozlemlenebilirlikHatasi("FEEDBACK_PACKAGE_NOT_FOUND", "Paket bulunamadi.");
-    }
-    if (!GECISLER.get(paket.durum)?.has(girdi.hedefDurum)) {
-      throw new GozlemlenebilirlikHatasi(
-        "FEEDBACK_TRANSITION_INVALID",
-        "Canli hata geri besleme gecisi tanimli degil.",
-      );
-    }
-    if (
-      girdi.hedefDurum === CANLI_HATA_DURUMLARI.PRODUCTION_DOGRULANDI
-      && paket.insan_kapisi_gerekli === 1
-      && paket.durum !== CANLI_HATA_DURUMLARI.INSAN_ONAYI_VERILDI
-    ) {
-      throw new GozlemlenebilirlikHatasi(
-        "FEEDBACK_HUMAN_GATE_REQUIRED",
-        "Kritik duzeltme production oncesi Human Gate gerektirir.",
-      );
-    }
     this.#veritabani.exec("BEGIN IMMEDIATE");
     try {
+      const paket = this.#paketSatiriGetir(girdi.paketKimligi);
+      if (!paket) {
+        throw new GozlemlenebilirlikHatasi("FEEDBACK_PACKAGE_NOT_FOUND", "Paket bulunamadi.");
+      }
+      if (!GECISLER.get(paket.durum)?.has(girdi.hedefDurum)) {
+        throw new GozlemlenebilirlikHatasi(
+          "FEEDBACK_TRANSITION_INVALID",
+          "Canli hata geri besleme gecisi tanimli degil.",
+        );
+      }
+      if (
+        girdi.hedefDurum === CANLI_HATA_DURUMLARI.PRODUCTION_DOGRULANDI
+        && paket.insan_kapisi_gerekli === 1
+        && paket.durum !== CANLI_HATA_DURUMLARI.INSAN_ONAYI_VERILDI
+      ) {
+        throw new GozlemlenebilirlikHatasi(
+          "FEEDBACK_HUMAN_GATE_REQUIRED",
+          "Kritik duzeltme production oncesi Human Gate gerektirir.",
+        );
+      }
       this.#veritabani.prepare(`
         UPDATE canli_hata_paketleri SET durum = ? WHERE paket_kimligi = ?
       `).run(girdi.hedefDurum, girdi.paketKimligi);
@@ -481,6 +502,18 @@ function telemetryDogrula(girdi) {
     }
     if (!SINYAL_TURLERI.has(girdi.sinyalTuru) || !SEVIYELER.has(girdi.seviye)) {
       throw new TypeError("sinyalTuru veya seviye gecersiz.");
+    }
+    for (const alan of [
+      "olayKimligi", "bilesen", "girisNoktasi", "islem", "traceKimligi",
+      "spanKimligi", "ustSpanKimligi", "korelasyonKimligi", "nedenKimligi",
+      "releaseKimligi", "commitKimligi", "deploymentKimligi",
+    ]) {
+      if (girdi[alan] !== null && girdi[alan] !== undefined && !MAKINE_KIMLIGI.test(girdi[alan])) {
+        throw new TypeError(`${alan} makine kimligi biciminde olmalidir.`);
+      }
+    }
+    if (!OLAY_ADI.test(girdi.olayAdi) || !SONUC_KODU.test(girdi.sonucKodu)) {
+      throw new TypeError("olayAdi veya sonucKodu gecersiz.");
     }
     if (girdi.isAnahtari !== null && girdi.isAnahtari !== undefined && !JIRA_KIMLIGI.test(girdi.isAnahtari)) {
       throw new TypeError("isAnahtari gecersiz.");
