@@ -304,6 +304,12 @@ export class TeslimatHatti {
       stagingZorunluMu: false,
     });
     onayYetkisiniDogrula(plan.recoveryOnayi, this.#onayAnahtarlari, mevcut);
+    this.#depo.onayKaydet({
+      releaseKimligi: plan.releaseKimligi,
+      onayTuru: "RECOVERY",
+      onay: plan.recoveryOnayi,
+      baglam,
+    });
     const leaseZamanlari = this.#leaseZamanlari();
     const kilit = this.#depo.kilitKurtarmaIcinDevral({
       ortam,
@@ -315,12 +321,6 @@ export class TeslimatHatti {
     });
     const heartbeat = this.#heartbeatBaslat(kilit);
     try {
-      this.#depo.onayKaydet({
-        releaseKimligi: plan.releaseKimligi,
-        onayTuru: "RECOVERY",
-        onay: plan.recoveryOnayi,
-        baglam,
-      });
       const rollbackSonucu = await this.#komutuCalistir(
         "rollback",
         { ...plan, dagitimArtefaktYolu: mevcut.dagitimArtefaktYolu },
@@ -722,7 +722,14 @@ export class TeslimatHattiDeposu {
         anahtar_kimligi AS anahtarKimligi, imza
       FROM human_gate_onaylari
       WHERE release_kimligi = ? AND onay_turu = ?
-    `).get(releaseKimligi, onayTuru);
+        AND (? = 'PRODUCTION' OR (ortam = ? AND kilit_nesli = ?))
+    `).get(
+      releaseKimligi,
+      onayTuru,
+      onayTuru,
+      onay.ortam,
+      onay.kilitNesli ?? null,
+    );
     if (mevcut) {
       const ayni = mevcut.kanitKimligi === onay.kanitKimligi
         && mevcut.onaylayanKimligi === onay.onaylayanKimligi
@@ -914,8 +921,86 @@ export class TeslimatHattiDeposu {
     if (!mevcut) throw fencingHatasi(releaseKimligi);
   }
 
+  #tabloKolonlari(tablo) {
+    const tabloVar = this.#veritabani.prepare(`
+      SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?
+    `).get(tablo);
+    if (!tabloVar) return [];
+    return this.#veritabani.prepare(`PRAGMA table_info(${tablo})`).all();
+  }
+
+  #eskiSemayiYukselt() {
+    const releaseKolonlari = this.#tabloKolonlari("release_kayitlari");
+    if (releaseKolonlari.length > 0) {
+      this.#veritabani.exec("DROP TRIGGER IF EXISTS release_manifest_update_yasak");
+      const adlar = new Set(releaseKolonlari.map(({ name }) => name));
+      if (adlar.has("artefakt_yolu") && !adlar.has("kaynak_artefakt_yolu")) {
+        this.#veritabani.exec(`
+          ALTER TABLE release_kayitlari
+          RENAME COLUMN artefakt_yolu TO kaynak_artefakt_yolu
+        `);
+        adlar.add("kaynak_artefakt_yolu");
+      }
+      if (!adlar.has("dagitim_artefakt_yolu")) {
+        this.#veritabani.exec(`
+          ALTER TABLE release_kayitlari
+          ADD COLUMN dagitim_artefakt_yolu TEXT NOT NULL DEFAULT ''
+        `);
+      }
+      if (!adlar.has("komut_plani_sha256")) {
+        this.#veritabani.exec(`
+          ALTER TABLE release_kayitlari
+          ADD COLUMN komut_plani_sha256 TEXT NOT NULL DEFAULT ''
+        `);
+      }
+      if (!adlar.has("staging_kanit_kimligi")) {
+        this.#veritabani.exec(`
+          ALTER TABLE release_kayitlari ADD COLUMN staging_kanit_kimligi TEXT
+        `);
+      }
+    }
+
+    const kilitKolonlari = this.#tabloKolonlari("deployment_kilitleri");
+    if (kilitKolonlari.length > 0) {
+      const adlar = new Set(kilitKolonlari.map(({ name }) => name));
+      if (!adlar.has("nesil")) {
+        this.#veritabani.exec(`
+          ALTER TABLE deployment_kilitleri
+          ADD COLUMN nesil INTEGER NOT NULL DEFAULT 1 CHECK (nesil > 0)
+        `);
+      }
+      if (!adlar.has("lease_bitis_zamani")) {
+        this.#veritabani.exec(`
+          ALTER TABLE deployment_kilitleri
+          ADD COLUMN lease_bitis_zamani TEXT NOT NULL DEFAULT ''
+        `);
+      }
+    }
+
+    const onayKolonlari = this.#tabloKolonlari("human_gate_onaylari");
+    const onayBirincilAnahtari = onayKolonlari
+      .filter(({ pk }) => pk > 0)
+      .sort((a, b) => a.pk - b.pk)
+      .map(({ name }) => name);
+    const onaySemasiEski = onayKolonlari.length > 0
+      && (!onayKolonlari.some(({ name }) => name === "ortam")
+        || onayBirincilAnahtari.join(",") !== "release_kimligi,onay_turu,kanit_kimligi");
+    if (onaySemasiEski) {
+      this.#veritabani.exec(`
+        DROP TRIGGER IF EXISTS human_gate_update_yasak;
+        DROP TRIGGER IF EXISTS human_gate_delete_yasak;
+        DROP INDEX IF EXISTS human_gate_production_tekil;
+        DROP INDEX IF EXISTS human_gate_recovery_nesil_tekil;
+        ALTER TABLE human_gate_onaylari RENAME TO human_gate_onaylari_legacy_v2;
+      `);
+    }
+  }
+
   #semayiOlustur() {
-    this.#veritabani.exec(`
+    this.#veritabani.exec("BEGIN IMMEDIATE");
+    try {
+      this.#eskiSemayiYukselt();
+      this.#veritabani.exec(`
       CREATE TABLE IF NOT EXISTS release_kayitlari (
         release_kimligi TEXT PRIMARY KEY,
         durum TEXT NOT NULL,
@@ -978,9 +1063,17 @@ export class TeslimatHattiDeposu {
         aktor TEXT NOT NULL,
         korelasyon_kimligi TEXT NOT NULL,
         zaman_damgasi TEXT NOT NULL,
-        PRIMARY KEY (release_kimligi, onay_turu),
+        PRIMARY KEY (release_kimligi, onay_turu, kanit_kimligi),
         FOREIGN KEY (release_kimligi) REFERENCES release_kayitlari (release_kimligi)
       ) STRICT;
+
+      CREATE UNIQUE INDEX IF NOT EXISTS human_gate_production_tekil
+      ON human_gate_onaylari (release_kimligi)
+      WHERE onay_turu = 'PRODUCTION';
+
+      CREATE UNIQUE INDEX IF NOT EXISTS human_gate_recovery_nesil_tekil
+      ON human_gate_onaylari (release_kimligi, ortam, kilit_nesli)
+      WHERE onay_turu = 'RECOVERY';
 
       CREATE TRIGGER IF NOT EXISTS release_audit_update_yasak
       BEFORE UPDATE ON release_denetimi
@@ -1009,7 +1102,18 @@ export class TeslimatHattiDeposu {
       CREATE TRIGGER IF NOT EXISTS human_gate_delete_yasak
       BEFORE DELETE ON human_gate_onaylari
       BEGIN SELECT RAISE(ABORT, 'HUMAN_GATE_IMMUTABLE'); END;
-    `);
+      `);
+      this.#veritabani.exec(`
+        INSERT INTO deployment_fence_sayaclari (ortam, son_nesil)
+        SELECT ortam, MAX(nesil) FROM deployment_kilitleri GROUP BY ortam
+        ON CONFLICT(ortam) DO UPDATE SET son_nesil = MAX(son_nesil, excluded.son_nesil);
+        PRAGMA user_version = 3;
+        COMMIT;
+      `);
+    } catch (hata) {
+      if (this.#veritabani.isTransaction) this.#veritabani.exec("ROLLBACK");
+      throw hata;
+    }
   }
 }
 

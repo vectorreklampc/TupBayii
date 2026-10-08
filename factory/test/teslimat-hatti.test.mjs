@@ -138,7 +138,7 @@ function insanOnayiEkle(releasePlani, stagingSonucu) {
 }
 
 describe("TBP-238 kontrollu teslimat hatti", () => {
-  test("TEST-TBP-238-CLI-01 candidate staging ve imzali production akisi calisir", () => {
+  test("TEST-TBP-238-CLI-01 candidate ve staging akisi calisir", () => {
     const { dizin, artefaktYolu, depoYolu } = kurulum();
     const planYolu = join(dizin, "release-plan.json");
     const komut = [process.execPath, "-e", "process.exit(0)"];
@@ -150,9 +150,6 @@ describe("TBP-238 kontrollu teslimat hatti", () => {
       process.execPath,
       "-e",
       "require('node:fs').writeFileSync(process.env.TBP_TARGET_ATTESTATION_PATH, JSON.stringify({artefaktSha256:require('node:crypto').createHash('sha256').update(require('node:fs').readFileSync(process.env.TBP_ARTIFACT_PATH)).digest('hex'),kilitKimligi:process.env.TBP_FENCE_TOKEN,fencingNesli:Number(process.env.TBP_FENCE_GENERATION),idempotencyAnahtari:process.env.TBP_IDEMPOTENCY_KEY}))",
-    ];
-    releasePlani.komutlar.productionArtifactVerify = [
-      ...releasePlani.komutlar.stagingArtifactVerify,
     ];
     writeFileSync(planYolu, JSON.stringify(releasePlani));
 
@@ -183,23 +180,17 @@ describe("TBP-238 kontrollu teslimat hatti", () => {
     const stagingCiktisi = JSON.parse(stagingSonucu.stdout);
     assert.equal(stagingCiktisi.durum, "STAGING_DOGRULANDI");
 
-    releasePlani.insanOnayi = insanOnayiEkle(releasePlani, stagingCiktisi).insanOnayi;
-    writeFileSync(planYolu, JSON.stringify(releasePlani));
-    const onayAnahtarlariYolu = join(dizin, "approval-keys.json");
-    writeFileSync(onayAnahtarlariYolu, JSON.stringify(ONAY_ANAHTARLARI));
-    const productionSonucu = spawnSync(process.execPath, [
+    const trustStoreEnjeksiyonu = spawnSync(process.execPath, [
       "src/teslimat-hatti-cli.mjs",
-      "production",
+      "candidate",
       "--plan", planYolu,
       "--database", depoYolu,
       "--actor", "codex",
-      "--trace", "trace-cli-238-production",
-      "--correlation", "corr-cli-238-production",
-      "--approval-keys", onayAnahtarlariYolu,
+      "--approval-keys", planYolu,
     ], { cwd: process.cwd(), encoding: "utf8" });
-
-    assert.equal(productionSonucu.status, 0, productionSonucu.stderr);
-    assert.equal(JSON.parse(productionSonucu.stdout).durum, "PRODUCTION_DOGRULANDI");
+    assert.equal(trustStoreEnjeksiyonu.status, 1);
+    const hataSatiri = trustStoreEnjeksiyonu.stderr.trim().split(/\r?\n/).at(-1);
+    assert.equal(JSON.parse(hataSatiri).kod, "RELEASE_INPUT_INVALID");
   });
 
   test("TEST-TBP-238-CANDIDATE-01 aday kapilarini sirayla gecirip immutable artefakti kaydeder", async () => {
@@ -689,11 +680,12 @@ describe("TBP-238 kontrollu teslimat hatti", () => {
     };
     let rollbackSerbestBirak;
     let rollbackBasladi;
+    let kurtarmaSimdi = new Date(simdi);
     const rollbackBeklet = new Promise((resolve) => { rollbackSerbestBirak = resolve; });
     const rollbackBaslangici = new Promise((resolve) => { rollbackBasladi = resolve; });
     const kurtarmaHatti = new TeslimatHatti({
       depoYolu,
-      saat: () => new Date(simdi),
+      saat: () => new Date(kurtarmaSimdi),
       leaseSuresiMs: 30_000,
       heartbeatAraligiMs: 100,
       komutCalistir: async (ad, _komut, komutBaglami) => {
@@ -702,6 +694,9 @@ describe("TBP-238 kontrollu teslimat hatti", () => {
           assert.equal(komutBaglami.fencingNesli, 2);
           rollbackBasladi();
           await rollbackBeklet;
+          if (komutBaglami.fencingNesli < hedefOrtam.fencingNesli) {
+            return { cikisKodu: 3 };
+          }
           hedefOrtam.fencingNesli = komutBaglami.fencingNesli;
           hedefOrtam.durum = "ROLLBACK";
         }
@@ -718,6 +713,7 @@ describe("TBP-238 kontrollu teslimat hatti", () => {
       }),
     );
     await rollbackBaslangici;
+    kurtarmaSimdi = new Date("2026-10-08T10:00:50.000Z");
     simdi = new Date("2026-10-08T10:00:50.000Z");
     await new Promise((resolve) => setTimeout(resolve, 150));
     simdi = new Date("2026-10-08T10:01:03.000Z");
@@ -737,7 +733,14 @@ describe("TBP-238 kontrollu teslimat hatti", () => {
       saat: () => new Date(simdi),
       leaseSuresiMs: 30_000,
       heartbeatAraligiMs: 100,
-      komutCalistir: basariliCalistirici([]),
+      komutCalistir: async (ad, _komut, komutBaglami) => {
+        if (ad === "rollback") {
+          assert.equal(komutBaglami.fencingNesli, 3);
+          hedefOrtam.fencingNesli = 3;
+          hedefOrtam.durum = "ROLLBACK";
+        }
+        return { cikisKodu: 0 };
+      },
       onayAnahtarlari: ONAY_ANAHTARLARI,
     });
     await assert.rejects(
@@ -747,17 +750,27 @@ describe("TBP-238 kontrollu teslimat hatti", () => {
       })),
       (hata) => hata.kod === "RELEASE_DEPLOYMENT_LOCKED",
     );
+    simdi = new Date("2026-10-08T10:01:21.000Z");
+    const ikinciKurtarmaSonucu = await ikinciKurtarmaHatti.calistir(
+      "recovery",
+      ikinciKurtarmaPlani,
+      baglam({
+        calistirici: "ship.sh-recovery-2",
+        zamanDamgasi: "2026-10-08T10:01:21.000Z",
+      }),
+    );
+    assert.equal(ikinciKurtarmaSonucu.durum, "STAGING_ENGELLENDI");
     rollbackSerbestBirak();
-    const kurtarmaSonucu = await kurtarmaIslemi;
-
-    assert.equal(kurtarmaSonucu.durum, "STAGING_ENGELLENDI");
-    assert.equal(kurtarmaSonucu.basariliMi, false);
+    await assert.rejects(
+      kurtarmaIslemi,
+      (hata) => hata.kod === "RELEASE_DEPLOYMENT_FENCE_LOST",
+    );
     stagingSerbestBirak();
     await assert.rejects(
       eskiDagitim,
       (hata) => hata.kod === "RELEASE_DEPLOYMENT_FENCE_LOST",
     );
-    assert.deepEqual(hedefOrtam, { fencingNesli: 2, durum: "ROLLBACK" });
+    assert.deepEqual(hedefOrtam, { fencingNesli: 3, durum: "ROLLBACK" });
     assert.equal(kurtarmaHatti.releaseGetir(releasePlani.releaseKimligi).durum, "STAGING_ENGELLENDI");
     ilkHat.kapat();
     kurtarmaHatti.kapat();
@@ -814,5 +827,94 @@ describe("TBP-238 kontrollu teslimat hatti", () => {
       /RELEASE_MANIFEST_IMMUTABLE/,
     );
     veritabani.close();
+  });
+
+  test("TEST-TBP-238-MIGRATION-01 eski SQLite semasini veri kaybetmeden atomik yukseltir", () => {
+    const { depoYolu } = kurulum();
+    const eski = new DatabaseSync(depoYolu);
+    eski.exec(`
+      CREATE TABLE release_kayitlari (
+        release_kimligi TEXT PRIMARY KEY, durum TEXT NOT NULL,
+        commit_kimligi TEXT NOT NULL, is_anahtarlari TEXT NOT NULL,
+        artefakt_yolu TEXT NOT NULL, artefakt_sha256 TEXT NOT NULL,
+        imza_kimligi TEXT NOT NULL, dagitim_stratejisi TEXT NOT NULL,
+        migration_plani TEXT NOT NULL, backup_restore_kaniti TEXT NOT NULL,
+        insan_onayi_kaniti TEXT
+      ) STRICT;
+      CREATE TABLE release_denetimi (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, release_kimligi TEXT NOT NULL,
+        asama TEXT NOT NULL, onceki_durum TEXT, hedef_durum TEXT NOT NULL,
+        sonuc_kodu TEXT NOT NULL, kapi TEXT, aktor TEXT NOT NULL,
+        calistirici TEXT NOT NULL, trace_kimligi TEXT NOT NULL,
+        korelasyon_kimligi TEXT NOT NULL, zaman_damgasi TEXT NOT NULL
+      ) STRICT;
+      CREATE TABLE deployment_kilitleri (
+        ortam TEXT PRIMARY KEY, release_kimligi TEXT NOT NULL,
+        sahip TEXT NOT NULL, kilit_kimligi TEXT NOT NULL UNIQUE,
+        alinma_zamani TEXT NOT NULL
+      ) STRICT;
+      CREATE TABLE human_gate_onaylari (
+        release_kimligi TEXT NOT NULL, onay_turu TEXT NOT NULL,
+        kanit_kimligi TEXT NOT NULL, onaylayan_kimligi TEXT NOT NULL,
+        artefakt_sha256 TEXT NOT NULL, staging_kanit_kimligi TEXT,
+        aktor TEXT NOT NULL, korelasyon_kimligi TEXT NOT NULL,
+        zaman_damgasi TEXT NOT NULL,
+        PRIMARY KEY (release_kimligi, onay_turu)
+      ) STRICT;
+      INSERT INTO release_kayitlari VALUES (
+        'release-legacy', 'STAGING_DAGITILIYOR', '86ed8a7', '["TBP-238"]',
+        'C:/legacy/artifact.tar', '${"a".repeat(64)}', 'legacy-sign', 'ROLLING',
+        '{}', 'legacy-backup', 'legacy-human'
+      );
+      INSERT INTO release_denetimi (
+        release_kimligi, asama, onceki_durum, hedef_durum, sonuc_kodu,
+        kapi, aktor, calistirici, trace_kimligi, korelasyon_kimligi, zaman_damgasi
+      ) VALUES (
+        'release-legacy', 'staging', 'ADAY_HAZIR', 'STAGING_DAGITILIYOR',
+        'RELEASE_DEPLOYMENT_STARTED', NULL, 'legacy', 'ship.sh',
+        'trace-legacy', 'corr-legacy', '2026-10-08T10:00:00.000Z'
+      );
+      INSERT INTO deployment_kilitleri VALUES (
+        'staging', 'release-legacy', 'ship.sh', 'legacy-lock',
+        '2026-10-08T10:00:00.000Z'
+      );
+      INSERT INTO human_gate_onaylari VALUES (
+        'release-legacy', 'PRODUCTION', 'legacy-gate', 'legacy-user',
+        '${"a".repeat(64)}', NULL, 'legacy', 'corr-legacy',
+        '2026-10-08T10:00:00.000Z'
+      );
+    `);
+    eski.close();
+
+    const depo = new TeslimatHattiDeposu(depoYolu);
+    depo.kapat();
+    const guncel = new DatabaseSync(depoYolu);
+    const releaseKolonlari = guncel.prepare("PRAGMA table_info(release_kayitlari)")
+      .all().map(({ name }) => name);
+    const onayKolonlari = guncel.prepare("PRAGMA table_info(human_gate_onaylari)")
+      .all().map(({ name }) => name);
+
+    assert.equal(guncel.prepare("PRAGMA user_version").get().user_version, 3);
+    assert.equal(releaseKolonlari.includes("kaynak_artefakt_yolu"), true);
+    assert.equal(releaseKolonlari.includes("dagitim_artefakt_yolu"), true);
+    assert.equal(releaseKolonlari.includes("komut_plani_sha256"), true);
+    assert.equal(onayKolonlari.includes("anahtar_kimligi"), true);
+    assert.deepEqual(
+      { ...guncel.prepare(`
+        SELECT kaynak_artefakt_yolu AS kaynak, durum
+        FROM release_kayitlari WHERE release_kimligi = 'release-legacy'
+      `).get() },
+      { kaynak: "C:/legacy/artifact.tar", durum: "STAGING_DAGITILIYOR" },
+    );
+    assert.equal(guncel.prepare("SELECT COUNT(*) AS adet FROM release_denetimi").get().adet, 1);
+    assert.deepEqual(
+      { ...guncel.prepare("SELECT nesil, lease_bitis_zamani AS leaseBitis FROM deployment_kilitleri").get() },
+      { nesil: 1, leaseBitis: "" },
+    );
+    assert.equal(
+      guncel.prepare("SELECT COUNT(*) AS adet FROM human_gate_onaylari_legacy_v2").get().adet,
+      1,
+    );
+    guncel.close();
   });
 });

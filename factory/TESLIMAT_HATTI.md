@@ -11,8 +11,8 @@ SQLite audit kaydina yazmaz.
 ```bash
 ./ship.sh candidate --plan release-plan.json --database /guvenli/state/ship.sqlite --actor operator
 ./ship.sh staging --plan release-plan.json --database /guvenli/state/ship.sqlite --actor operator
-./ship.sh production --plan release-plan.json --database /guvenli/state/ship.sqlite --actor operator --approval-keys /guvenli/config/human-gate-keys.json
-./ship.sh recovery --plan recovery-plan.json --database /guvenli/state/ship.sqlite --actor operator --approval-keys /guvenli/config/human-gate-keys.json
+./ship.sh production --plan release-plan.json --database /guvenli/state/ship.sqlite --actor operator
+./ship.sh recovery --plan recovery-plan.json --database /guvenli/state/ship.sqlite --actor operator
 ```
 
 `--trace` ve `--correlation` verilmezse CLI yeni kimlik uretir. Plan dosyasi
@@ -79,11 +79,15 @@ redirect veya command substitution yorumlanmaz. Platforma ozel gercek deploy,
 smoke, telemetry ve rollback komutlari bu planda acikca verilmeden release
 ilerlemez.
 
-`--approval-keys` dosyasi planin disindaki trust anchor'dir. JSON nesnesinde her
-anahtar kimligi icin `onaylayanKimligi` ve `publicKeyPem` bulunur. Onay imzasi,
-`humanGateImzaMetniOlustur` tarafindan uretilen kanonik UTF-8 metin uzerinden
-Ed25519 ile uretilir. Plan icine public key koymak veya yalniz onaylayan adini
-yazmak yetki vermez.
+Human Gate trust store planin ve CLI argumanlarinin disindadir. Yolu Windows'ta
+`C:\ProgramData\TupBayiProje\human-gate-keys.json`, Linux/macOS'ta
+`/etc/tupbayiproje/human-gate-keys.json` olarak sabittir. Dosya deployment
+yoneticisi tarafindan provision edilir; uygulama/operator hesabi yazamaz.
+POSIX'te root sahipligi ile grup/dunya yazma izinleri de calisma aninda
+dogrulanir. JSON nesnesinde her anahtar kimligi icin `onaylayanKimligi` ve
+`publicKeyPem` bulunur. Onay imzasi, `humanGateImzaMetniOlustur` tarafindan
+uretilen kanonik UTF-8 metin uzerinden Ed25519 ile uretilir. Plan icine public
+key koymak veya cagri sirasinda baska trust store secmek yetki vermez.
 
 ## Guvenlik ve recovery
 
@@ -103,8 +107,13 @@ yazmak yetki vermez.
 - Normal hata ve sinyalde lock `finally` ile birakilir. Ani process/host kaybinda
   lease dolana kadar akis fail-closed kalir. Sonrasinda yalniz `recoveryOnayi`
   bulunan `recovery` komutu stale lock'i devralip heartbeat altinda idempotent
-  rollback calistirir; DB elle degistirilmez. Rollback basarisizsa durum
+  rollback calistirir. Her recovery denemesi ortam ve stale fence nesli bazinda
+  ayri append-only onay olarak saklanir; ikinci bir crash yeni nesil onayiyla
+  tekrar kurtarilabilir. DB elle degistirilmez. Rollback basarisizsa durum
   `INCIDENT_ACIK` olur.
+- SQLite semasi transaction icinde `user_version=3` seviyesine yukseltilir.
+  Eski release, audit ve lock kayitlari korunur; eski self-asserted Human Gate
+  satirlari yetki vermeyen `human_gate_onaylari_legacy_v2` arsivine tasinir.
 - Release audit update/delete trigger'lariyla immutable'dir; trace, correlation,
   Jira, commit, release ve artifact referanslari birlikte tutulur.
 - Migration dry-run, backup/restore hazirligi, forward ve rollback planlari bos
