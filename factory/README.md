@@ -73,3 +73,28 @@ Kod rollback'i mevcut SQLite semasini silmez. Bu ticket yalniz additive ilk
 semayi olusturur; migration yoktur. Process yeniden baslatildiginda ayni
 veritabani yolu verilerek son kalici durum okunur. Veritabani dosyasi silinmez
 ve hata durumundan sessizce baska bir duruma gecilmez.
+
+## TBP-32 belirtim koruyucusu
+
+`src/belirtim-koruyucusu.mjs`, normalize edilmis Jira snapshot'ini saf ve
+deterministik olarak degerlendirir. Ag cagrisi yapmaz ve caller'in `hazir`
+beyanina guvenmez.
+
+Girdi uc bolumden olusur:
+
+- `alanlar`: Story standardindaki 23 zorunlu alan.
+- `etiketler`: Gereksinim, mimari, sozlesme, tasarim, izlenebilirlik,
+  Test Oracle, risk ve Human Gate kapilari.
+- `kanitlar`: Mimari, sozlesme, Figma, izlenebilirlik, test referansi ve
+  gerekiyorsa insan onayi referanslari.
+
+Koruyucu eksikleri su kararli sirayla toplar:
+`GEREKSINIM_EKSIK`, `MIMARI_EKSIK`, `SOZLESME_EKSIK`,
+`TASARIM_EKSIK`, `IZLENEBILIRLIK_EKSIK`,
+`TEST_REFERANSI_EKSIK`. Eksik yoksa sonuc `HAZIR` olur. `sonuc` ilk
+neden kodudur; `nedenKodlari` butun eksik kategorilerini, `eksikler` ise
+alan veya kanit yolunu tasir.
+
+`N/A` yalniz `N/A - <somut gerekce>` biciminde kabul edilir. Tasarim gerekli
+ise Figma URL kaniti, Human Gate gerekli ise onay kaniti zorunludur. Hazir ve
+gerekmez etiketlerinin birlikte bulunmasi fail-closed reddedilir.
