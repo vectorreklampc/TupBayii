@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 
 import { randomUUID } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { lstatSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { spawn } from "node:child_process";
-import { resolve } from "node:path";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 
 import { TeslimatHatti, TeslimatHattiHatasi } from "./teslimat-hatti.mjs";
 
@@ -62,9 +63,24 @@ function secenekleriOku(secenekler) {
   return sonuc;
 }
 
-async function komutCalistir(_ad, komut, baglam) {
+async function komutCalistir(ad, komut, baglam) {
   const [calistirilabilir, ...argumanlar] = komut;
+  const deployKomutuMu = ad.endsWith("Deploy");
+  const kanitDizini = deployKomutuMu
+    ? mkdtempSync(join(tmpdir(), "tbp-deploy-attestation-"))
+    : null;
+  const kanitYolu = kanitDizini ? join(kanitDizini, "sha256") : null;
   return new Promise((resolveSonuc, reject) => {
+    let tamamlandi = false;
+    const bitir = (islem) => {
+      if (tamamlandi) return;
+      tamamlandi = true;
+      try {
+        islem();
+      } finally {
+        if (kanitDizini) rmSync(kanitDizini, { recursive: true, force: true });
+      }
+    };
     const altSurec = spawn(calistirilabilir, argumanlar, {
       cwd: process.cwd(),
       env: {
@@ -73,13 +89,36 @@ async function komutCalistir(_ad, komut, baglam) {
         TBP_DEPLOYMENT_ENVIRONMENT: baglam.ortam,
         TBP_TRACE_ID: baglam.traceKimligi,
         TBP_CORRELATION_ID: baglam.korelasyonKimligi,
+        TBP_ARTIFACT_PATH: baglam.artefaktYolu,
+        TBP_ARTIFACT_SHA256: baglam.artefaktSha256,
+        ...(kanitYolu
+          ? { TBP_DEPLOYMENT_ATTESTATION_PATH: kanitYolu }
+          : {}),
       },
       shell: false,
       stdio: "inherit",
     });
-    altSurec.once("error", reject);
+    altSurec.once("error", (hata) => bitir(() => reject(hata)));
     altSurec.once("exit", (kod, sinyal) => {
-      resolveSonuc({ cikisKodu: Number.isInteger(kod) ? kod : 1, sinyal });
+      bitir(() => {
+        try {
+          const cikisKodu = Number.isInteger(kod) ? kod : 1;
+          let dagitilanArtefaktSha256;
+          if (deployKomutuMu && cikisKodu === 0) {
+            const kanit = lstatSync(kanitYolu);
+            if (!kanit.isFile() || kanit.size > 65) {
+              throw new Error("Deploy attestation gecerli bir SHA-256 dosyasi degil.");
+            }
+            dagitilanArtefaktSha256 = readFileSync(kanitYolu, "utf8").trim();
+            if (!/^[0-9a-f]{64}$/.test(dagitilanArtefaktSha256)) {
+              throw new Error("Deploy attestation SHA-256 biciminde degil.");
+            }
+          }
+          resolveSonuc({ cikisKodu, sinyal, dagitilanArtefaktSha256 });
+        } catch (hata) {
+          reject(hata);
+        }
+      });
     });
   });
 }

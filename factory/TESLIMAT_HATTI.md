@@ -12,12 +12,17 @@ SQLite audit kaydina yazmaz.
 ./ship.sh candidate --plan release-plan.json --database /guvenli/state/ship.sqlite --actor operator
 ./ship.sh staging --plan release-plan.json --database /guvenli/state/ship.sqlite --actor operator
 ./ship.sh production --plan release-plan.json --database /guvenli/state/ship.sqlite --actor operator
+./ship.sh recovery --plan recovery-plan.json --database /guvenli/state/ship.sqlite --actor operator
 ```
 
 `--trace` ve `--correlation` verilmezse CLI yeni kimlik uretir. Plan dosyasi
 trusted operasyon girdisidir ve review edilmeden dis kaynaktan alinmaz; listedeki
 komutlar gercek surec olarak calistirilir. Her komuta `TBP_RELEASE_ID`,
-`TBP_DEPLOYMENT_ENVIRONMENT`, `TBP_TRACE_ID` ve `TBP_CORRELATION_ID` aktarilir.
+`TBP_DEPLOYMENT_ENVIRONMENT`, `TBP_TRACE_ID`, `TBP_CORRELATION_ID`,
+`TBP_ARTIFACT_PATH` ve `TBP_ARTIFACT_SHA256` aktarilir. Deploy komutu ayrica
+gercekte uyguladigi artefaktin SHA-256 ozetini
+`TBP_DEPLOYMENT_ATTESTATION_PATH` dosyasina yazmalidir; eksik veya farkli ozet
+kapinin kapanmasina neden olur.
 
 ## Sabit kapi sirasi
 
@@ -55,7 +60,10 @@ Plan su alanlari tasir:
 - `imzaKimligi`, `dagitimStratejisi` (`CANARY`, `ROLLING`, `RECREATE`);
 - `migrationPlani`: dry-run, forward ve rollback kanit kimlikleri;
 - `backupRestoreKanitKimligi`;
-- production icin `insanOnayiKanitKimligi`;
+- production icin `insanOnayi`: kanit, onaylayan, release, artefakt ve staging
+  kanit kimliklerini birlikte tasiyan nesne;
+- crash recovery icin `recoveryOnayi`: kanit, onaylayan, release ve artefakt
+  kimliklerini birlikte tasiyan nesne;
 - `komutlar`: her sabit kapi adi icin executable ve argumanlardan olusan dizi.
 
 Ornek komut bicimi `{"fullTest":["npm","test"]}` seklindedir. `&&`, pipe,
@@ -65,13 +73,20 @@ ilerlemez.
 
 ## Guvenlik ve recovery
 
-- Artifact SHA-256 candidate oncesi ve her deployment oncesi tekrar hesaplanir.
-- Ayni release kimligi farkli manifest ile tekrar kullanilamaz.
-- Staging ve production ortamlari kalici, tekil deployment lock ile korunur.
+- Candidate, kaynak artefakti SHA-256 ile adreslenen salt-okunur bir snapshota
+  kopyalar. Staging ve production yalniz bu snapshot yolunu kullanir; deploy
+  oncesi ve sonrasi ozet tekrar hesaplanir.
+- Ayni release kimligi farkli manifest veya komut planiyla tekrar kullanilamaz.
+  Komut plani ozeti candidate kaydinin immutable parcasidir.
+- Human Gate kayitlari append-only tutulur. Production onayi release, artefakt,
+  staging kaniti ve onaylayan kimligine baglidir; serbest metin onay sayilmaz.
+- Staging ve production ortamlari lease, heartbeat ve monoton fencing token
+  iceren kalici deployment lock ile korunur. Suresi dolmus veya devralinmis bir
+  calistirici release durumunu ilerletemez.
 - Normal hata ve sinyalde lock `finally` ile birakilir. Ani process/host kaybinda
-  DB'de kalan lock fail-closed davranir; DB elle degistirilmez. Once gercek ortam
-  ve deployment durumu incelenir, incident/Human Gate karariyla yeni release
-  olusturulur veya kontrollu operasyonel recovery uygulanir.
+  lease dolana kadar akis fail-closed kalir. Sonrasinda yalniz `recoveryOnayi`
+  bulunan `recovery` komutu stale lock'i devralip idempotent rollback calistirir;
+  DB elle degistirilmez. Rollback basarisizsa durum `INCIDENT_ACIK` olur.
 - Release audit update/delete trigger'lariyla immutable'dir; trace, correlation,
   Jira, commit, release ve artifact referanslari birlikte tutulur.
 - Migration dry-run, backup/restore hazirligi, forward ve rollback planlari bos
