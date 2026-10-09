@@ -27,6 +27,23 @@ public sealed class PgBouncerUyumlulukTests(PgBouncerKonteyneri pgbouncer)
     }
 
     [Fact]
+    public async Task Transaction_CommitOncesiDigerBaglantidanGorulmez_CommitSonrasiGorulur()
+    {
+        var tablo = await pgbouncer.BosTabloOlusturAsync();
+
+        await using var yazici = new NpgsqlConnection(pgbouncer.UygulamaBaglantiDizesi);
+        await yazici.OpenAsync();
+        await using var transaction = await yazici.BeginTransactionAsync();
+        await new NpgsqlCommand($"INSERT INTO {tablo} (deger) VALUES (1)", yazici, transaction)
+            .ExecuteNonQueryAsync();
+
+        Assert.Equal(0, await pgbouncer.SkalerAsync<int>($"SELECT count(*)::integer FROM {tablo}"));
+
+        await transaction.CommitAsync();
+        Assert.Equal(1, await pgbouncer.SatirSayisiAsync(tablo));
+    }
+
+    [Fact]
     public async Task Baglanti_Acilinca_TransactionPoolingVePreparedStatementTakibiDogrulanir()
     {
         await using var baglanti = new NpgsqlConnection(pgbouncer.UygulamaBaglantiDizesi);
