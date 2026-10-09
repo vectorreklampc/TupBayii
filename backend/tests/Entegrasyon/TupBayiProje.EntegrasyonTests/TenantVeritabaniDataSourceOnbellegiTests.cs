@@ -1,14 +1,18 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using Npgsql;
 using TupBayiProje.Moduller.Tenancy.Altyapi;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace TupBayiProje.EntegrasyonTests;
 
 // TBP-63: bounded NpgsqlDataSource yasam dongusu gercek PostgreSQL ile dogrulanir.
 [Collection(PostgreSqlKoleksiyonu.Ad)]
-public sealed class TenantVeritabaniDataSourceOnbellegiTests(PostgreSqlKonteyneri postgreSql)
+public sealed class TenantVeritabaniDataSourceOnbellegiTests(
+    PostgreSqlKonteyneri postgreSql,
+    ITestOutputHelper cikti)
 {
     [Fact]
     public async Task ParalelAyniTenantKiralamalari_TekDataSourceKullanir()
@@ -32,15 +36,26 @@ public sealed class TenantVeritabaniDataSourceOnbellegiTests(PostgreSqlKonteyner
         var baglantiDizesi = await postgreSql.BosVeritabaniOlusturAsync();
         const int kapasite = 8;
         await using var onbellek = OnbellekOlustur(kapasite);
-
-        for (var sira = 0; sira < 128; sira++)
+        using var surec = Process.GetCurrentProcess();
+        for (var tur = 0; tur < 4; tur++)
         {
-            await using var kiralama = await onbellek.KiralaAsync(Guid.CreateVersion7(), baglantiDizesi);
-            Assert.InRange(onbellek.AktifDataSourceSayisi, 1, kapasite);
+            for (var sira = 0; sira < 128; sira++)
+            {
+                await using var kiralama = await onbellek.KiralaAsync(Guid.CreateVersion7(), baglantiDizesi);
+                Assert.InRange(onbellek.AktifDataSourceSayisi, 1, kapasite);
+            }
+
+            var managedBellek = GC.GetTotalMemory(forceFullCollection: true);
+            surec.Refresh();
+            cikti.WriteLine(
+                $"Tur {tur + 1}: managed={managedBellek}, " +
+                $"private={surec.PrivateMemorySize64}, dataSource={onbellek.AktifDataSourceSayisi}");
         }
 
         Assert.Equal(kapasite, onbellek.AktifDataSourceSayisi);
         Assert.Equal(kapasite, onbellek.OnbellektekiDataSourceSayisi);
+        await onbellek.DisposeAsync();
+        Assert.Equal(0, onbellek.AktifDataSourceSayisi);
     }
 
     [Fact]
