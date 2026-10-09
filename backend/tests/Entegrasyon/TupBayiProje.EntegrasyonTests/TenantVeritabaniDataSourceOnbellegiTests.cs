@@ -243,6 +243,72 @@ public sealed class TenantVeritabaniDataSourceOnbellegiTests(PostgreSqlKonteyner
     }
 
     [Fact]
+    public async Task DisposeHatasi_KapasiteyiBosSaymazVeKapanisBeklemez()
+    {
+        var baglantiDizesi = await postgreSql.BosVeritabaniOlusturAsync();
+        var disposeHatalari = 0L;
+        using var dinleyici = new MeterListener();
+        dinleyici.InstrumentPublished = (arac, meterListener) =>
+        {
+            if (arac.Meter.Name == TenantVeritabaniDataSourceOnbellegi.MeterAdi &&
+                arac.Name == "tbp.tenancy.datasource.dispose.error")
+            {
+                meterListener.EnableMeasurementEvents(arac);
+            }
+        };
+        dinleyici.SetMeasurementEventCallback<long>((_, olcum, _, _) =>
+            Interlocked.Add(ref disposeHatalari, olcum));
+        dinleyici.Start();
+
+        var onbellek = new TenantVeritabaniDataSourceOnbellegi(
+            new TenantVeritabaniDataSourceOnbellegiSecenekleri(
+                1, TimeSpan.FromHours(1), TimeSpan.FromMinutes(5),
+                TimeSpan.FromMinutes(1), TimeSpan.FromSeconds(3)),
+            async dataSource =>
+            {
+                await dataSource.DisposeAsync();
+                throw new InvalidOperationException("gizli-baglanti-dizesi");
+            });
+        var kiralama = await onbellek.KiralaAsync(Guid.CreateVersion7(), baglantiDizesi);
+        await kiralama.DisposeAsync();
+
+        var hata = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            await onbellek.KiralaAsync(Guid.CreateVersion7(), baglantiDizesi));
+        Assert.DoesNotContain("gizli-baglanti-dizesi", hata.ToString(), StringComparison.Ordinal);
+        Assert.Equal(1, onbellek.AktifDataSourceSayisi);
+        Assert.Equal(1, disposeHatalari);
+        await onbellek.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
+    public async Task BaglantiDogrulamaVeDisposeHatasi_HataliKaydiOnbellekteBirakmaz()
+    {
+        var baglantiDizesi = await postgreSql.BosVeritabaniOlusturAsync();
+        var ulasilamayanBaglantiDizesi = new NpgsqlConnectionStringBuilder(baglantiDizesi)
+        {
+            Host = "127.0.0.1",
+            Port = 1,
+            Timeout = 1,
+        }.ConnectionString;
+        await using var onbellek = new TenantVeritabaniDataSourceOnbellegi(
+            new TenantVeritabaniDataSourceOnbellegiSecenekleri(
+                1, TimeSpan.FromHours(1), TimeSpan.FromMinutes(5),
+                TimeSpan.FromMinutes(1), TimeSpan.FromSeconds(3)),
+            async dataSource =>
+            {
+                await dataSource.DisposeAsync();
+                throw new InvalidOperationException("gizli-baglanti-dizesi");
+            });
+
+        var hata = await Assert.ThrowsAnyAsync<NpgsqlException>(async () =>
+            await onbellek.KiralaAsync(Guid.CreateVersion7(), ulasilamayanBaglantiDizesi));
+        Assert.DoesNotContain("gizli-baglanti-dizesi", hata.ToString(), StringComparison.Ordinal);
+        Assert.Equal(0, onbellek.OnbellektekiDataSourceSayisi);
+        await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            await onbellek.KiralaAsync(Guid.CreateVersion7(), baglantiDizesi));
+    }
+
+    [Fact]
     public async Task ParalelBasarisizOlusturmaSonrasi_YeniBasariliKayitKorunur()
     {
         var gecerliBaglantiDizesi = await postgreSql.BosVeritabaniOlusturAsync();

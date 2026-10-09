@@ -9,6 +9,7 @@ public sealed class TenantVeritabaniDataSourceOnbellegi : IAsyncDisposable
     public const string MeterAdi = "TupBayiProje.Tenancy.DataSourceOnbellegi";
 
     private readonly TenantVeritabaniDataSourceOnbellegiSecenekleri _secenekler;
+    private readonly Func<NpgsqlDataSource, ValueTask> _dataSourceDisposeEt;
     private readonly Dictionary<Guid, Kayit> _kayitlar = [];
     private readonly HashSet<Kayit> _disposeBekleyenKayitlar = [];
     private readonly SemaphoreSlim _kilit = new(1, 1);
@@ -19,6 +20,7 @@ public sealed class TenantVeritabaniDataSourceOnbellegi : IAsyncDisposable
     private readonly Counter<long> _tahliye;
     private readonly Counter<long> _olusturma;
     private readonly Counter<long> _dispose;
+    private readonly Counter<long> _disposeHatasi;
     private readonly Counter<long> _baglantiHatasi;
     private readonly UpDownCounter<long> _aktif;
     private readonly Task _temizlemeGorevi;
@@ -28,18 +30,29 @@ public sealed class TenantVeritabaniDataSourceOnbellegi : IAsyncDisposable
     private int _aktifDataSourceSayisi;
     private int _onbellektekiDataSourceSayisi;
     private int _bekleyenDisposeSayisi;
+    private int _disposeEdilemeyenSayisi;
     private int _disposeBaslatildi;
     private bool _kapatiliyor;
 
     public TenantVeritabaniDataSourceOnbellegi(TenantVeritabaniDataSourceOnbellegiSecenekleri secenekler)
+        : this(secenekler, dataSource => dataSource.DisposeAsync())
+    {
+    }
+
+    internal TenantVeritabaniDataSourceOnbellegi(
+        TenantVeritabaniDataSourceOnbellegiSecenekleri secenekler,
+        Func<NpgsqlDataSource, ValueTask> dataSourceDisposeEt)
     {
         ArgumentNullException.ThrowIfNull(secenekler);
+        ArgumentNullException.ThrowIfNull(dataSourceDisposeEt);
         _secenekler = secenekler;
+        _dataSourceDisposeEt = dataSourceDisposeEt;
         _isabet = _meter.CreateCounter<long>("tbp.tenancy.datasource.cache.hit");
         _isabetsizlik = _meter.CreateCounter<long>("tbp.tenancy.datasource.cache.miss");
         _tahliye = _meter.CreateCounter<long>("tbp.tenancy.datasource.eviction");
         _olusturma = _meter.CreateCounter<long>("tbp.tenancy.datasource.create");
         _dispose = _meter.CreateCounter<long>("tbp.tenancy.datasource.dispose");
+        _disposeHatasi = _meter.CreateCounter<long>("tbp.tenancy.datasource.dispose.error");
         _baglantiHatasi = _meter.CreateCounter<long>("tbp.tenancy.datasource.connection.error");
         _aktif = _meter.CreateUpDownCounter<long>("tbp.tenancy.datasource.active");
         _temizlemeGorevi = PeriyodikTemizleAsync();
@@ -98,9 +111,9 @@ public sealed class TenantVeritabaniDataSourceOnbellegi : IAsyncDisposable
         finally
         {
             _kilit.Release();
+            // Kapasite reddi de olsa onceden ayrilan kayitlar beklemede kalamaz.
+            await KayitlariDisposeEtAsync(tahliyeEdilenler).ConfigureAwait(false);
         }
-
-        await KayitlariDisposeEtAsync(tahliyeEdilenler).ConfigureAwait(false);
 
         try
         {
@@ -247,7 +260,7 @@ public sealed class TenantVeritabaniDataSourceOnbellegi : IAsyncDisposable
         {
             if (dataSource is not null)
             {
-                await dataSource.DisposeAsync().ConfigureAwait(false);
+                await GuvenliDisposeEtAsync(dataSource).ConfigureAwait(false);
             }
 
             await BasarisizOlusturmayiKaldirAsync(kayit).ConfigureAwait(false);
@@ -258,7 +271,7 @@ public sealed class TenantVeritabaniDataSourceOnbellegi : IAsyncDisposable
             _baglantiHatasi.Add(1);
             if (dataSource is not null)
             {
-                await dataSource.DisposeAsync().ConfigureAwait(false);
+                await GuvenliDisposeEtAsync(dataSource).ConfigureAwait(false);
             }
 
             await BasarisizOlusturmayiKaldirAsync(kayit).ConfigureAwait(false);
@@ -271,9 +284,31 @@ public sealed class TenantVeritabaniDataSourceOnbellegi : IAsyncDisposable
         IReadOnlyCollection<Kayit> onceDisposeEdilecekler,
         IReadOnlyCollection<Task> onceTamamlanacakDisposelar)
     {
-        await KayitlariDisposeEtAsync(onceDisposeEdilecekler).ConfigureAwait(false);
-        await Task.WhenAll(onceTamamlanacakDisposelar).ConfigureAwait(false);
-        return await DataSourceOlusturAsync(kayit).ConfigureAwait(false);
+        await Task.Yield(); // Dispose ve baglanti acma global kilit birakildiktan sonra baslar.
+        try
+        {
+            await KayitlariDisposeEtAsync(onceDisposeEdilecekler).ConfigureAwait(false);
+            await Task.WhenAll(onceTamamlanacakDisposelar).ConfigureAwait(false);
+            await _kilit.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                if (_kayitlar.Count + _disposeEdilemeyenSayisi > _secenekler.Kapasite)
+                {
+                    throw new InvalidOperationException("Data source onbellegi kapasitesi dolu.");
+                }
+            }
+            finally
+            {
+                _kilit.Release();
+            }
+
+            return await DataSourceOlusturAsync(kayit).ConfigureAwait(false);
+        }
+        catch
+        {
+            await BasarisizOlusturmayiKaldirAsync(kayit).ConfigureAwait(false);
+            throw;
+        }
     }
 
     private void SuresiDolanBosKayitlariAyir(DateTimeOffset simdi, List<Kayit> ayrilanlar)
@@ -343,7 +378,13 @@ public sealed class TenantVeritabaniDataSourceOnbellegi : IAsyncDisposable
 
     private void KapasiteIcinYerAc(List<Kayit> ayrilanlar)
     {
-        while (_kayitlar.Count >= _secenekler.Kapasite)
+        var gerekenBosKayitSayisi = _kayitlar.Count + _disposeEdilemeyenSayisi - _secenekler.Kapasite + 1;
+        if (_kayitlar.Values.Count(kayit => kayit.KiralamaSayisi == 0) < gerekenBosKayitSayisi)
+        {
+            throw new InvalidOperationException("Data source onbellegi dolu ve tum kayitlar kullanimda.");
+        }
+
+        while (_kayitlar.Count + _disposeEdilemeyenSayisi >= _secenekler.Kapasite)
         {
             var aday = _kayitlar.Values
                 .Where(kayit => kayit.KiralamaSayisi == 0)
@@ -416,26 +457,46 @@ public sealed class TenantVeritabaniDataSourceOnbellegi : IAsyncDisposable
             return;
         }
 
-        NpgsqlDataSource? dataSource = null;
+        NpgsqlDataSource dataSource;
         try
         {
             dataSource = await kayit.OlusturmaGorevi.ConfigureAwait(false);
-            await dataSource.DisposeAsync().ConfigureAwait(false);
         }
         catch
         {
             // Basarisiz olusturmada factory olusturdugu data source'u kendisi dispose eder.
+            await DisposeTamamlandiAsync(kayit).ConfigureAwait(false);
+            return;
         }
-        finally
+
+        try
         {
-            if (dataSource is not null)
+            if (await GuvenliDisposeEtAsync(dataSource).ConfigureAwait(false))
             {
                 Interlocked.Decrement(ref _aktifDataSourceSayisi);
                 _aktif.Add(-1);
                 _dispose.Add(1);
             }
-
+        }
+        finally
+        {
             await DisposeTamamlandiAsync(kayit).ConfigureAwait(false);
+        }
+    }
+
+    private async Task<bool> GuvenliDisposeEtAsync(NpgsqlDataSource dataSource)
+    {
+        try
+        {
+            await _dataSourceDisposeEt(dataSource).ConfigureAwait(false);
+            return true;
+        }
+        catch
+        {
+            // Fiziksel kaynak belirsizdir; slot yeniden kullanilmaz, hata detayi sizdirilmaz.
+            Interlocked.Increment(ref _disposeEdilemeyenSayisi);
+            _disposeHatasi.Add(1);
+            return false;
         }
     }
 
