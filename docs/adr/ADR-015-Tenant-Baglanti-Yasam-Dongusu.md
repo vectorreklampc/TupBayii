@@ -34,10 +34,11 @@ pooling ile anlamsız ve uyumsuz olan connection reset komutlarını önlemek i�
 `No Reset On Close=true` ve `Multiplexing=false` ile çalıştırılmıştır.
 
 Protocol-level prepared statement kullanımı yalnız PgBouncer'da
-`max_prepared_statements` sıfırdan büyükken desteklenir. Başlangıç üretim değeri
-`100` seçilmiştir. Npgsql `Max Auto Prepare` değeri iş yükü ölçülmeden üretim için
-sabitlenmez veya etkinleştirilmez. PoC explicit protocol prepare davranışını
-farklı PostgreSQL backend connection'ları arasında doğrular.
+`max_prepared_statements` sıfırdan büyükken desteklenir. PoC değeri `100` olarak ayarlanmıştır;
+üretim değeri iş yükü ve kaynak ölçülmeden sabitlenmez. Npgsql `Max Auto Prepare`
+değeri de bu ölçüm olmadan üretim için sabitlenmez veya etkinleştirilmez. PoC
+explicit protocol prepare davranışını farklı PostgreSQL backend connection'ları
+arasında doğrular.
 
 ## Değiştirilemez Sınırlar
 
