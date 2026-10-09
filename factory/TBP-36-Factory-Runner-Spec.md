@@ -1,0 +1,103 @@
+# TBP-36: Factory kalite runner ilk dilim belirtimi (taslak)
+
+Kaynak gerçek: [canlı TBP-36](https://ucarmakadil.atlassian.net/browse/TBP-36),
+özellikle 11044, 11051 ve 11052 numaralı yorumlar. Bu belge yalnız Factory
+ilk diliminin inceleme taslağıdır; `READY`, gerçek yürütme veya TBP-36 kapanışı
+değildir. PR #23'teki sentetik yardımcı ayrı kalır.
+
+## Hedef ve sınır
+
+Claude'un test beyanından bağımsız, değişmez aday commit'teki Factory kodunu
+önceden onaylı Test Oracle ile sınamak. İlk dilim yalnız Node sözdizimi ve
+Factory birim/karar testlerini kapsar. Backend, contracts, event-contracts,
+Admin Web, Flutter, DB, performans ve production kontrolleri bu dilimin
+başarısından PASS alamaz. TBP-237 plan ve kalite kararının sahibidir; bu runner
+yalnız güvenilir süreç gözlemini ona taşır.
+
+## Teknoloji, yapı ve adlandırma
+
+- Node.js 24, mevcut `factory/src` ve `factory/test`; bağımlılıksız
+  `factory/package-lock.json`. `npm ci`, `npm run`, shell ve yeni paket yok.
+- Domain adları Türkçe anlamlı ASCII; yorumlar Türkçe ASCII; Node/Git/Docker
+  teknoloji adları özgün yazılır. Mevcut kaynakta aynı kural korunur.
+- Komut manifesti ve oracle, aday commit'in serbest metninden değil ayrı
+  onaylı, sürümlü snapshot'tan gelir. Aday `src` ile onaylı `test` ve fixture
+  ağaçları ayrı hash'lerle bağlanır. Adayın kendi test değişikliği otomatik
+  oracle güncellemesi olamaz.
+
+## Önerilen v1 komut manifesti
+
+Her süreç için cwd `/workspace/factory`, shell kapalı, executable digest ile
+pinlenmiş Node image içindeki `/usr/local/bin/node`. Girdi yalnız onaylı
+`issue + candidate SHA + oracle hash + katalog hash + attempt` tuple'ıdır.
+Liste üzerinde dosya adı ekleme/çıkarma/yeniden adlandırma yeni katalog onayı
+gerektirir. Kaynak dosyaları aday SHA'dan, testler ve fixture onaylı oracle
+snapshot'ından alınır.
+
+`TEST-TBP-36-FACTORY-CHECK`: Her aşağıdaki dosya için ayrı argv
+`["--check", "<dosya>"]`, dosya başına 10 saniye. `src` ve `test` dizinleri
+ayrı snapshot'lardan geldiği için check her ikisini de kapsar.
+
+| Aday kaynak | Onaylı oracle testi |
+| --- | --- |
+| `src/api-guvenlik-kapisi.mjs` | `test/api-guvenlik-kapisi.test.mjs` |
+| `src/belirtim-koruyucusu.mjs` | `test/belirtim-koruyucusu.test.mjs` |
+| `src/durum-makinesi.mjs` | `test/durum-makinesi.test.mjs` |
+| `src/invariant-kapisi.mjs` | `test/invariant-kapisi.test.mjs` |
+| `src/is-sahiplenme.mjs` | `test/is-sahiplenme.test.mjs` |
+| `src/is-uygunluk-motoru.mjs` | `test/is-uygunluk-motoru.test.mjs` |
+| `src/kabul-testi-catisi.mjs` | `test/kabul-testi-catisi.test.mjs` |
+| `src/mimari-koruyucu.mjs` | `test/mimari-koruyucu.test.mjs` |
+| `src/risk-degerlendirme-motoru.mjs` | `test/risk-degerlendirme-motoru.test.mjs` |
+| `src/sentetik-kalite-runner.mjs` | `test/sentetik-kalite-runner.test.mjs` |
+
+`TEST-TBP-36-FACTORY-UNIT`: argv `--test` ve tablodaki on onaylı test
+dosyasının açık, sıralı listesi; 180 saniye. `test/fixtures` de yalnız onaylı
+snapshot'tan gelir. Wildcard/autodiscovery ve aday test dosyası kullanılmaz.
+Toplam attempt sınırı 5 dakika. Test kimlikleri, zorunlu sayılar ve
+skip/cancel/flaky kuralı TBP-237 planıyla eşlenmeden exit 0 PASS sayılmaz.
+Test kodu ve TAP/stdout yalnız başına güvenilir kaynak değildir; adapter'ın
+gerçek yürütmeyi nasıl kanıtladığı ayrıca olumsuz fixture ile doğrulanmalıdır.
+
+## Yalıtım ve sınırlar
+
+Her attempt atılabilir Linux container/VM'de, ağ kapalı, sır/token ve host
+profiline erişimsiz, Docker socket'siz, non-root ve no-new-privileges ile;
+capability yok, kaynak ve test mount'ları salt okunur, yalnız geçici tmpfs
+yazılabilir, CPU/bellek/pid sınırları tanımlı çalışır. İmaj ve runtime
+konfigürasyonu onaylı digest/hash ile bağlanır. Trusted orkestratör container
+dışındadır; içerden yazılmış sonuç dosyasına veya PASS metnine güvenmez.
+İptal/zaman aşımında tüm container/process-tree kapanışı gözlenir. Kapanış
+kanıtlanamazsa sonuç BLOCKED; canlı süreç kalabilecek ortamda yeni iş
+başlatılmaz. Host'ta değiştirilebilir repo kodu çalıştırılmaz.
+
+## Kanıt ve test stratejisi
+
+Trusted katman issue, SHA, oracle/katalog/runtime hash'i, attempt, TEST
+kimliği, süre, exit/sinyal, timeout, çıktı byte sayısı/hash'i ve kapanış
+gözlemini bağlar. Ham stdout/stderr Jira, PR veya kalıcı artefakta girmez.
+Öneri: komut başına 1 MiB çıktı sınırı; aşım BLOCKED. Metadata için 7 gün,
+yalnız proje maintainer erişimi önerilir; retention/silme mekanizması ayrıca
+onaylanacaktır. Belirsiz crash/replay yeni PASS üretemez; aynı tuple ikinci
+çalıştırma başlatmaz. `SKIP`/`FLAKY` ilk dilimde PASS değildir.
+
+Pozitif test: onaylı test snapshot'ı ve aday Factory kaynağında her zorunlu
+komut gerçek exit 0, eksiksiz test kimliği ve trusted kanıt üretir. Negatif
+testler: eksik/değişmiş test veya fixture, sahte stdout PASS + exit 1,
+yanlış SHA/oracle, timeout, kill reddi/kaçan alt süreç, ağ/host-secret
+sentineli, çıktı taşması, eşzamanlı/replay, bozuk kanıt ve testte skip.
+Bu koşulların herhangi biri TBP-237 `ACCEPTED` üretmemelidir.
+
+## Açık kararlar ve uygulama kapısı
+
+1. Tablodaki exact dosyalar ve TEST kimliklerinin yetkili oracle revizyonu,
+   fixture hash'leri ve aday yeni dosyaların kabul yolu.
+2. Node image digest'i, Docker Desktop/CI hedefindeki yalıtımın gerçek ağ,
+   secret, mount ve process-tree negatif test kanıtı.
+3. Test adapter'ının sahte TAP/PASS ve skip'i ayırt eden güven kökü;
+   TBP-237'ye doğrulanmış sonuç biçimi.
+4. 1 MiB sınırı, 7 günlük metadata retention/erişim/silme onayı ve crash
+   sonrası tek sahiplik kalıcılığı.
+
+Bu dört karar ve 23 alanlı Jira DoR onaylanmadan gerçek Factory kodu runner'a
+verilmez, PR #23 merge edilmez veya TBP-36 `Tamamlandı` yapılmaz.
