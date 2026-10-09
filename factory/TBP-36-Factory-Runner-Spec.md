@@ -94,7 +94,12 @@ sonuç gözlemini aday süreç sınırının dışına taşıyan black-box/contr
 revizyonudur. Bu kapsam değişikliği ve TEST eşlemesi onaylanmadan yalnız
 syntax kontrolü bu açığı kapatmaz; `UNIT` kararı `BLOCKED` kalır.
 
-## Önerilen ilk black-box contract dilimi (henüz onaylı katalog değil)
+## İlk black-box contract dilimi (tasarım yönü onaylı; yürütme manifesti değil)
+
+Canlı TBP-36 yorum 11062, aşağıdaki dört vakayı ve vaka başına 10 saniye ile
+ayrı stdin/stdout 4 KiB sınırını ilk contract oracle tasarım kararı olarak
+kaydeder. Bu karar, vakaların canonical byte dizisini ve hash'ini, adapter
+kaynak revizyonunu, tam Node argv'sini veya yürütme yetkisini onaylamaz.
 
 `TEST-TBP-36-FACTORY-RISK-CONTRACT` yalnız
 `src/risk-degerlendirme-motoru.mjs` dosyasının mevcut `riskiDegerlendir`
@@ -127,7 +132,7 @@ risk testlerinden seçilmiştir (JSON anahtarları aşağıdaki sıradadır):
 ```
 
 Her vaka için yalnız `girdi` nesnesi tek UTF-8 JSON satırı ve LF olarak
-stdin'e verilir. Önerilen sınır vaka başına 10 saniye, stdin ve stdout için
+stdin'e verilir. Bu dilim için sınır vaka başına 10 saniye, stdin ve stdout için
 ayrı ayrı 4 KiB; stderr boş olmalıdır. Çıktı tek JSON nesnesi ve tek LF
 olmalıdır; güvenilir katman tam şema ve beklenen değerleri doğrular, tekrar
 eden JSON nesne anahtarını (iç içe nesneler dâhil) ayrıştırma öncesinde tespit
@@ -136,6 +141,27 @@ reddedilir. Bu denetimin trusted adapter'ı ve negatif fixture'ı ayrıca
 onaylanmadan PASS yoktur. Katalog JSON'unun SHA-256 değeri ve Node
 çağrısının tam argv'si onaylı manifestte sabitlenir;
 bu belge tek başına o manifest değildir.
+
+Adapter sınırı aday sürecinin dışındadır: trusted orkestratör onaylı oracle
+snapshot'ından her vakayı seçer, stdin byte'larını kendisi oluşturup sayar,
+stdout/stderr byte'larını ayrı sayaçlarla akış sırasında sınırlar ve ham
+çıktıyı kalıcı loga geçirmez. Çıkış kodu, sinyal, timeout ve container kapanışı
+gözlemi de dışarıdan alınır. Çıktı ancak tek UTF-8 JSON nesnesi + tek LF
+olarak ayrıştırılır; nesne anahtarları her iç içe nesnede tekil olmalıdır.
+`JSON.parse` yinelenen anahtarı son değerle örttüğü için tek başına
+doğrulayıcı olamaz. Nesnenin tam dört alanı, türleri, değerleri,
+`nedenKodlari` sırası ve fazla/eksik alan yokluğu onaylı beklenen nesneyle
+karşılaştırılır. Adapter, aday modülden import edilen kod veya adayın stdout
+metninden alınan bir PASS/kimlik bilgisine dayanmaz. Bir vakadaki bilinmeyen
+sonuç bütün contract'ı `BLOCKED` yapar; kısmi vaka başarısı aktarılmaz.
+
+Trusted adapter'ın kendi kaynak hash'i ve oracle fixture byte'larının hash'i
+aday SHA'dan ayrı, yetkili manifestte pinlenir. Negatif fixture'lar en az
+`process.exit(0)`/boş çıktı, sahte PASS/TAP, yinelenen üst ve iç nesne anahtarı,
+ek satır veya byte, bozuk UTF-8/JSON, yanlış veya fazla alan, stderr, nonzero,
+timeout, her akış için sınır aşımı ve kapanışı doğrulanamayan alt süreci
+`BLOCKED` olarak göstermelidir. Gerçek adapter ve bu fixture'ların kanıtı
+olmadan dört vaka onayından PASS sonucu çıkarılmaz.
 
 Beklenen dört alanın tamamı (`riskSeviyesi`, `nedenKodlari`,
 `codexOnIncelemeGerekliMi`, `insanKapisiGerekliMi`) güvenilir tarafta
