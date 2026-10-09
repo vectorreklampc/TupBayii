@@ -173,6 +173,41 @@ public sealed class TenantVeritabaniDataSourceOnbellegiTests(PostgreSqlKonteyner
     }
 
     [Fact]
+    public async Task MetadataDegisince_EskiBaglantiYeniKiralamaAlamazVeYeniBaglantiYenilenir()
+    {
+        var baglantiDizesi = await postgreSql.BosVeritabaniOlusturAsync();
+        var degisenBaglantiDizesi = new NpgsqlConnectionStringBuilder(baglantiDizesi)
+        {
+            ApplicationName = "yenilenen-tenant",
+        }.ConnectionString;
+        await using var onbellek = OnbellekOlustur(kapasite: 2);
+        var tenantId = Guid.CreateVersion7();
+        var ilk = await onbellek.KiralaAsync(tenantId, baglantiDizesi);
+        var eskiBaglantiKiralandi = false;
+        try
+        {
+            await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+                await onbellek.KiralaAsync(tenantId, degisenBaglantiDizesi));
+            try
+            {
+                await using var eski = await onbellek.KiralaAsync(tenantId, baglantiDizesi);
+                eskiBaglantiKiralandi = true;
+            }
+            catch (InvalidOperationException)
+            {
+            }
+        }
+        finally
+        {
+            await ilk.DisposeAsync();
+        }
+
+        Assert.False(eskiBaglantiKiralandi);
+        await using var yenilenen = await onbellek.KiralaAsync(tenantId, degisenBaglantiDizesi);
+        Assert.NotSame(ilk.DataSource, yenilenen.DataSource);
+    }
+
+    [Fact]
     public async Task Kapanis_AktifKiralamaDisposeEdileneKadarBeklerVeTekrarCagrilabilir()
     {
         var baglantiDizesi = await postgreSql.BosVeritabaniOlusturAsync();
@@ -188,6 +223,23 @@ public sealed class TenantVeritabaniDataSourceOnbellegiTests(PostgreSqlKonteyner
         Assert.Equal(0, onbellek.AktifDataSourceSayisi);
 
         await onbellek.DisposeAsync();
+    }
+
+    [Fact]
+    public async Task SonKiralamaVeKapanisEszamanli_TumKaynaklariGuvenleBirakir()
+    {
+        var baglantiDizesi = await postgreSql.BosVeritabaniOlusturAsync();
+        for (var sira = 0; sira < 32; sira++)
+        {
+            var onbellek = OnbellekOlustur(kapasite: 1);
+            var kiralama = await onbellek.KiralaAsync(Guid.CreateVersion7(), baglantiDizesi);
+
+            await Task.WhenAll(
+                kiralama.DisposeAsync().AsTask(),
+                onbellek.DisposeAsync().AsTask()).WaitAsync(TimeSpan.FromSeconds(10));
+
+            Assert.Equal(0, onbellek.AktifDataSourceSayisi);
+        }
     }
 
     [Fact]

@@ -221,7 +221,8 @@ public sealed class TenantVeritabaniDataSourceOnbellegi : IAsyncDisposable
 
         await _temizlemeGorevi.ConfigureAwait(false);
         _kapatma.Dispose();
-        _kilit.Dispose();
+        // Son kiralamanin Release'i kapanis sinyali sonrasina sarkabilir.
+        // SemaphoreSlim managed kalir; erken dispose bu Release ile yarisir.
         _meter.Dispose();
     }
 
@@ -309,6 +310,12 @@ public sealed class TenantVeritabaniDataSourceOnbellegi : IAsyncDisposable
         DateTimeOffset simdi,
         List<Kayit> ayrilanlar)
     {
+        if (kayit.SuresiDoldu)
+        {
+            throw new InvalidOperationException(
+                "Tenant data source kaydinin yenilenmesi icin aktif kiralamalarin tamamlanmasi bekleniyor.");
+        }
+
         var yasamSuresiDoldu = simdi - kayit.OlusturulmaZamani >= _secenekler.YasamSuresi;
         var bosKalmaSuresiDoldu = kayit.KiralamaSayisi == 0 &&
             simdi - kayit.BosKalmaBaslangici >= _secenekler.BosKalmaSuresi;
