@@ -24,6 +24,12 @@ yalnız güvenilir süreç gözlemini ona taşır.
   onaylı, sürümlü snapshot'tan gelir. Aday `src` ile onaylı `test` ve fixture
   ağaçları ayrı hash'lerle bağlanır. Adayın kendi test değişikliği otomatik
   oracle güncellemesi olamaz.
+- İlk oracle **adayı** `main` commit
+  `d2ec0594a59a77e6f3b9014ff433e4d4620537e8` içindeki dokuz Factory
+  testidir; Git SHA tek başına insan onayı veya güvenilir manifest değildir.
+  Bu revizyondaki fixture, iki invariant JSON ve kök normatif Markdown da
+  aynı snapshot'ın girdileridir. Onaylı oracle kimliği/hash'i ayrıca
+  sabitlenmeden gerçek yürütme ve PASS yoktur.
 
 ## Önerilen v1 komut manifesti
 
@@ -34,11 +40,13 @@ Liste üzerinde dosya adı ekleme/çıkarma/yeniden adlandırma yeni katalog ona
 gerektirir. Kaynak dosyaları aday SHA'dan, testler ve fixture onaylı oracle
 snapshot'ından alınır.
 
-`TEST-TBP-36-FACTORY-CHECK`: Her aşağıdaki dosya için ayrı argv
-`["--check", "<dosya>"]`, dosya başına 10 saniye. `src` ve `test` dizinleri
-ayrı snapshot'lardan geldiği için check her ikisini de kapsar.
+`TEST-TBP-36-FACTORY-CHECK`: Her aşağıdaki aday kaynak ve baseline oracle test
+dosyası için ayrı argv `["--check", "<dosya>"]`, dosya başına 10 saniye.
+`src` ve `test` dizinleri ayrı snapshot'lardan geldiği için check her ikisini
+de kapsar. Adayda yeni dosya ancak ayrıca sabitlenmiş katalog girdisiyle
+syntax kontrolüne girer; bu kontrol ona unit kapsamı kazandırmaz.
 
-| Aday kaynak | Onaylı oracle testi |
+| Aday kaynak | Baseline oracle testi adayı |
 | --- | --- |
 | `src/api-guvenlik-kapisi.mjs` | `test/api-guvenlik-kapisi.test.mjs` |
 | `src/belirtim-koruyucusu.mjs` | `test/belirtim-koruyucusu.test.mjs` |
@@ -49,9 +57,14 @@ ayrı snapshot'lardan geldiği için check her ikisini de kapsar.
 | `src/kabul-testi-catisi.mjs` | `test/kabul-testi-catisi.test.mjs` |
 | `src/mimari-koruyucu.mjs` | `test/mimari-koruyucu.test.mjs` |
 | `src/risk-degerlendirme-motoru.mjs` | `test/risk-degerlendirme-motoru.test.mjs` |
-| `src/sentetik-kalite-runner.mjs` | `test/sentetik-kalite-runner.test.mjs` |
 
-`TEST-TBP-36-FACTORY-UNIT`: argv `--test` ve tablodaki on onaylı test
+`src/sentetik-kalite-runner.mjs` ve `test/sentetik-kalite-runner.test.mjs`
+yalnız PR #23 aday dalındadır. Kaynak dosyasının `--check` kontrolü katalogda
+ayrıca sabitlenebilir; test dosyası bu baseline oracle'nın parçası değildir.
+Runner davranışı için onaylı ayrı test revizyonu oluşmadan bu yeni özelliğin
+test kapsamı veya TBP-36 tamamlanması iddia edilemez.
+
+`TEST-TBP-36-FACTORY-UNIT`: argv `--test` ve tablodaki dokuz baseline test
 dosyasının açık, sıralı listesi; 180 saniye. `test/fixtures` de yalnız onaylı
 snapshot'tan gelir. Wildcard/autodiscovery ve aday test dosyası kullanılmaz.
 Girdi kapanışı yalnız bu iki dizinden ibaret değildir:
@@ -101,7 +114,8 @@ Bu koşulların herhangi biri TBP-237 `ACCEPTED` üretmemelidir.
 
 ## Açık kararlar ve uygulama kapısı
 
-1. Tablodaki exact dosyalar ve TEST kimliklerinin yetkili oracle revizyonu,
+1. Dokuz baseline test ile yeni runner testinin ayrı yetkili oracle revizyonu,
+   exact dosyalar ve TEST kimlikleri; ayrıca
    fixture ile üç ek normatif girdi dosyasının hash/güven kökü ve aday yeni
    dosyaların kabul yolu.
 2. Node image digest'i, Docker Desktop/CI hedefindeki yalıtımın gerçek ağ,
