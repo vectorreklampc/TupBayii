@@ -22,6 +22,7 @@ public sealed class TenantVeritabaniDataSourceOnbellegi : IAsyncDisposable
     private readonly Counter<long> _dispose;
     private readonly Counter<long> _disposeHatasi;
     private readonly Counter<long> _baglantiHatasi;
+    private readonly Counter<long> _runtimeBaglantiHatasi;
     private readonly UpDownCounter<long> _aktif;
     private readonly Task _temizlemeGorevi;
     private readonly TaskCompletionSource _kapatmaTamamlandi =
@@ -53,7 +54,9 @@ public sealed class TenantVeritabaniDataSourceOnbellegi : IAsyncDisposable
         _olusturma = _meter.CreateCounter<long>("tbp.tenancy.datasource.create");
         _dispose = _meter.CreateCounter<long>("tbp.tenancy.datasource.dispose");
         _disposeHatasi = _meter.CreateCounter<long>("tbp.tenancy.datasource.dispose.error");
-        _baglantiHatasi = _meter.CreateCounter<long>("tbp.tenancy.datasource.connection.error");
+        // Ilk dogrulama ve kiralama sonrasi baglanti acma hatalari ayri kapsamlarla olculur.
+        _baglantiHatasi = _meter.CreateCounter<long>("tbp.tenancy.datasource.connection.validation.error");
+        _runtimeBaglantiHatasi = _meter.CreateCounter<long>("tbp.tenancy.datasource.connection.runtime.error");
         _aktif = _meter.CreateUpDownCounter<long>("tbp.tenancy.datasource.active");
         _temizlemeGorevi = PeriyodikTemizleAsync();
     }
@@ -61,6 +64,8 @@ public sealed class TenantVeritabaniDataSourceOnbellegi : IAsyncDisposable
     public int AktifDataSourceSayisi => Volatile.Read(ref _aktifDataSourceSayisi);
 
     public int OnbellektekiDataSourceSayisi => Volatile.Read(ref _onbellektekiDataSourceSayisi);
+
+    internal void BaglantiHatasiniOlc() => _runtimeBaglantiHatasi.Add(1);
 
     public async ValueTask<TenantVeritabaniDataSourceKiralama> KiralaAsync(
         Guid tenantId,

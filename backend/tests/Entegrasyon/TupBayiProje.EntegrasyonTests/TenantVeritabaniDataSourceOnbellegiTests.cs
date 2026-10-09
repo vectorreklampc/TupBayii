@@ -178,7 +178,7 @@ public sealed class TenantVeritabaniDataSourceOnbellegiTests(
         Assert.Equal(
             "Tenant data source kaydinin yenilenmesi icin aktif kiralamalarin tamamlanmasi bekleniyor.",
             yenilemeHatasi.Message);
-        await using (var baglanti = await kiralama.DataSource.OpenConnectionAsync())
+        await using (var baglanti = await kiralama.OpenConnectionAsync())
         {
             Assert.Equal(System.Data.ConnectionState.Open, baglanti.State);
         }
@@ -349,7 +349,7 @@ public sealed class TenantVeritabaniDataSourceOnbellegiTests(
 
         Assert.Equal(1, onbellek.AktifDataSourceSayisi);
         Assert.Equal(1, onbellek.OnbellektekiDataSourceSayisi);
-        await using var baglanti = await basariliKiralama.DataSource.OpenConnectionAsync();
+        await using var baglanti = await basariliKiralama.OpenConnectionAsync();
         Assert.Equal(System.Data.ConnectionState.Open, baglanti.State);
     }
 
@@ -373,6 +373,61 @@ public sealed class TenantVeritabaniDataSourceOnbellegiTests(
 
         await using var kiralama = await onbellek.KiralaAsync(tenantId, gecerliBaglantiDizesi);
         Assert.Equal(1, onbellek.AktifDataSourceSayisi);
+    }
+
+    [Fact]
+    public async Task OnbellekIsabetindenSonraBaglantiKesilirse_RuntimeHatasiOlculur()
+    {
+        var baglantiDizesi = await postgreSql.BosVeritabaniOlusturAsync();
+        var veritabaniAdi = new NpgsqlConnectionStringBuilder(baglantiDizesi).Database;
+        long runtimeHatalari = 0;
+        using var dinleyici = new MeterListener();
+        dinleyici.InstrumentPublished = (arac, meterListener) =>
+        {
+            if (arac.Meter.Name == TenantVeritabaniDataSourceOnbellegi.MeterAdi &&
+                arac.Name == "tbp.tenancy.datasource.connection.runtime.error")
+            {
+                meterListener.EnableMeasurementEvents(arac);
+            }
+        };
+        dinleyici.SetMeasurementEventCallback<long>((_, olcum, _, _) =>
+            Interlocked.Add(ref runtimeHatalari, olcum));
+        dinleyici.Start();
+
+        await using var onbellek = OnbellekOlustur(kapasite: 2);
+        var tenantId = Guid.CreateVersion7();
+        await using var ilk = await onbellek.KiralaAsync(tenantId, baglantiDizesi);
+        await using var ikinci = await onbellek.KiralaAsync(tenantId, baglantiDizesi);
+        await using (var baglanti = await ikinci.OpenConnectionAsync())
+        {
+            Assert.Equal(System.Data.ConnectionState.Open, baglanti.State);
+        }
+
+        var yonetimDizesi = new NpgsqlConnectionStringBuilder(baglantiDizesi) { Database = "postgres" }
+            .ConnectionString;
+        await using var yonetim = new NpgsqlConnection(yonetimDizesi);
+        await yonetim.OpenAsync();
+        try
+        {
+            await using (var komut = new NpgsqlCommand($"ALTER DATABASE {veritabaniAdi} ALLOW_CONNECTIONS false", yonetim))
+            {
+                await komut.ExecuteNonQueryAsync();
+            }
+
+            ikinci.DataSource.Clear();
+            await Assert.ThrowsAnyAsync<NpgsqlException>(async () => await ikinci.OpenConnectionAsync());
+            Assert.Equal(1, runtimeHatalari);
+            Assert.Equal(1, onbellek.AktifDataSourceSayisi);
+        }
+        finally
+        {
+            await using var komut = new NpgsqlCommand($"ALTER DATABASE {veritabaniAdi} ALLOW_CONNECTIONS true", yonetim);
+            await komut.ExecuteNonQueryAsync();
+        }
+
+        await using var iyilesenBaglanti = await ikinci.OpenConnectionAsync();
+        Assert.Equal(System.Data.ConnectionState.Open, iyilesenBaglanti.State);
+        Assert.Equal(1, runtimeHatalari);
     }
 
     [Fact]
@@ -417,7 +472,7 @@ public sealed class TenantVeritabaniDataSourceOnbellegiTests(
         AssertOlculdu(olcumler, "tbp.tenancy.datasource.eviction", 1);
         AssertOlculdu(olcumler, "tbp.tenancy.datasource.create", 1);
         AssertOlculdu(olcumler, "tbp.tenancy.datasource.dispose", 1);
-        AssertOlculdu(olcumler, "tbp.tenancy.datasource.connection.error", 1);
+        AssertOlculdu(olcumler, "tbp.tenancy.datasource.connection.validation.error", 1);
         Assert.Contains(1, olcumler["tbp.tenancy.datasource.active"]);
         Assert.Contains(-1, olcumler["tbp.tenancy.datasource.active"]);
     }

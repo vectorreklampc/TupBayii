@@ -17,7 +17,23 @@ public sealed class TenantVeritabaniDataSourceKiralama : IAsyncDisposable
         DataSource = dataSource;
     }
 
-    public NpgsqlDataSource DataSource { get; }
+    // Ham data source disariya verilmez; runtime baglanti acma hatalari bu sinirda olculur.
+    internal NpgsqlDataSource DataSource { get; }
+
+    // Baglanti, kiralama bitmeden kapatilmalidir. Sorgu hatalari bu sayacin kapsami disindadir.
+    public async ValueTask<NpgsqlConnection> OpenConnectionAsync(CancellationToken cancellationToken = default)
+    {
+        var sahip = _sahip ?? throw new ObjectDisposedException(nameof(TenantVeritabaniDataSourceKiralama));
+        try
+        {
+            return await DataSource.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (NpgsqlException)
+        {
+            sahip.BaglantiHatasiniOlc();
+            throw;
+        }
+    }
 
     public async ValueTask DisposeAsync()
     {
