@@ -20,12 +20,14 @@ export async function sentetikKomutuCalistir(komutKimligi) {
     let zamanAsimi = false;
     let tamamlandi = false;
     let sureSiniri;
+    let kapanisSiniri;
     let altSurec;
 
     const bitir = (exitKodu, nedenKodu) => {
       if (tamamlandi) return;
       tamamlandi = true;
       clearTimeout(sureSiniri);
+      clearTimeout(kapanisSiniri);
       resolve(karar(komutKimligi, exitKodu, nedenKodu));
     };
 
@@ -49,7 +51,16 @@ export async function sentetikKomutuCalistir(komutKimligi) {
     });
     sureSiniri = setTimeout(() => {
       zamanAsimi = true;
-      altSurec.kill();
+      try {
+        if (!altSurec.kill()) {
+          bitir(null, "SUREC_SONLANDIRILAMADI");
+          return;
+        }
+      } catch {
+        bitir(null, "SUREC_SONLANDIRILAMADI");
+        return;
+      }
+      kapanisSiniri = setTimeout(() => bitir(null, "SUREC_SONLANDIRILAMADI"), 500);
     }, komut.sureMs);
   });
 }

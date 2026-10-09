@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { describe, test } from "node:test";
+import { ChildProcess } from "node:child_process";
+import { describe, mock, test } from "node:test";
 
 import { sentetikKomutuCalistir } from "../src/sentetik-kalite-runner.mjs";
 
@@ -26,6 +27,52 @@ describe("TBP-36 sentetik kalite runner kaniti", () => {
     const sonuc = await sentetikKomutuCalistir("ZAMAN_ASIMI");
     assert.equal(sonuc.sonuc, "BLOCKED");
     assert.equal(sonuc.nedenKodu, "ZAMAN_ASIMI");
+  });
+
+  test("sonlandirma reddedilirse sonuc suresiz beklemez ve basari sayilmaz", async () => {
+    const gercekKill = ChildProcess.prototype.kill;
+    let altSurec;
+    const killTaklidi = mock.method(ChildProcess.prototype, "kill", function () {
+      altSurec = this;
+      return false;
+    });
+    let disSure;
+    try {
+      const sonuc = await Promise.race([
+        sentetikKomutuCalistir("ZAMAN_ASIMI"),
+        new Promise((resolve) => { disSure = setTimeout(() => resolve("ASKIDA"), 1500); }),
+      ]);
+      assert.notEqual(sonuc, "ASKIDA");
+      assert.equal(sonuc.sonuc, "BLOCKED");
+      assert.equal(sonuc.nedenKodu, "SUREC_SONLANDIRILAMADI");
+    } finally {
+      clearTimeout(disSure);
+      killTaklidi.mock.restore();
+      if (altSurec) gercekKill.call(altSurec);
+    }
+  });
+
+  test("sonlandirma kabul edilse de kapanis gelmezse engeller", async () => {
+    const gercekKill = ChildProcess.prototype.kill;
+    let altSurec;
+    const killTaklidi = mock.method(ChildProcess.prototype, "kill", function () {
+      altSurec = this;
+      return true;
+    });
+    let disSure;
+    try {
+      const sonuc = await Promise.race([
+        sentetikKomutuCalistir("ZAMAN_ASIMI"),
+        new Promise((resolve) => { disSure = setTimeout(() => resolve("ASKIDA"), 1800); }),
+      ]);
+      assert.notEqual(sonuc, "ASKIDA");
+      assert.equal(sonuc.sonuc, "BLOCKED");
+      assert.equal(sonuc.nedenKodu, "SUREC_SONLANDIRILAMADI");
+    } finally {
+      clearTimeout(disSure);
+      killTaklidi.mock.restore();
+      if (altSurec) gercekKill.call(altSurec);
+    }
   });
 
   test("bilinmeyen kimligi komut veya shell olarak calistirmaz", async () => {
