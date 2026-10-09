@@ -182,6 +182,27 @@ karşılaştırılır. Adapter, aday modülden import edilen kod veya adayın st
 metninden alınan bir PASS/kimlik bilgisine dayanmaz. Bir vakadaki bilinmeyen
 sonuç bütün contract'ı `BLOCKED` yapar; kısmi vaka başarısı aktarılmaz.
 
+Vaka kimliği ve beklenen sonuç yalnız dış orkestratörün seçtiği oracle kaydından
+gelir; adayın stdout'u, dosya adı veya ortam değişkeni hangi vakanın koşulduğunu
+belirleyemez. Her vaka için ayrı attempt-alt-kimliği, seçilmiş `RISK-01..04`,
+aday SHA ve oracle/adapter hash'i süreç başlatılmadan bağlanır. Dört vakanın
+tamamı aynı üst attempt'e ait değilse veya herhangi biri ikinci kez/eksik
+görünüyorsa toplu PASS yoktur. `4096` byte sınırı UTF-8 olarak yazılmış stdin'in
+ve yakalanan stdout'un **ham byte** uzunluğuna, LF dâhil uygulanır; `4096`
+kabul, `4097` ret demektir. Stderr için kabul edilen uzunluk sıfırdır. Çıkış
+`0`, EOF ve container/process-tree kapanış gözlemi birlikte tamamlanmadan
+JSON eşleşmesi başarıya çevrilmez; timeout sonrası gelen doğru JSON da ret olur.
+
+Aday dosya staging alanına SHA'sı doğrulanmış Git ağacından alınır. Manifestin
+izin verdiği normal dosya yolu ve gerçek dosya türü doğrulanır; symlink,
+submodule, mutlak/üst dizine çıkan yol veya adayın getirdiği başka mount
+girdisi reddedilir. Hash kontrolü ile mount/başlatma arasında adayın
+değiştirebildiği paylaşılmış dizin kullanılmaz. Trusted bridge ve dış adapter
+aday commit'ten yüklenmez; kendi gözden geçirilmiş byte'ları ayrı kaynak/hash
+olarak sabitlenir. Node ortamına `NODE_OPTIONS`, preload, inspector veya adayın
+belirlediği `PATH` aktarılmaz. Bunlar tasarım önkoşuludur; somut staging ve CI
+yalıtım kanıtı hâlâ açık kapıdır.
+
 Trusted adapter'ın kendi kaynak hash'i ve oracle fixture byte'larının hash'i
 aday SHA'dan ayrı, yetkili manifestte pinlenir. Negatif fixture'lar en az
 `process.exit(0)`/boş çıktı, sahte PASS/TAP, yinelenen üst ve iç nesne anahtarı,
@@ -189,6 +210,14 @@ ek satır veya byte, bozuk UTF-8/JSON, yanlış veya fazla alan, stderr, nonzero
 timeout, her akış için sınır aşımı ve kapanışı doğrulanamayan alt süreci
 `BLOCKED` olarak göstermelidir. Gerçek adapter ve bu fixture'ların kanıtı
 olmadan dört vaka onayından PASS sonucu çıkarılmaz.
+
+Negatif fixture değerlendirmesi her vaka için dışarıdan seçilmiş beklenen
+sonuçla yapılır: aday `kimlik` veya `PASS` yazsa da kimlik değişmez; `4097` byte
+stdout, `4097` byte stdin, tek stderr byte'ı, tam JSON ardından ek byte,
+yinelenen nested anahtar, EOF olmadan asılı süreç, doğru çıktıdan sonra nonzero
+ve kapanışı doğrulanamayan container ayrı ayrı `BLOCKED` üretir. Pozitif
+fixture, dört ayrı koşunun tam tuple ve dış gözlemle birleştirilmesini kanıtlar;
+hiçbiri mevcut dokuz in-process `UNIT` testine PASS yazmaz.
 
 Beklenen dört alanın tamamı (`riskSeviyesi`, `nedenKodlari`,
 `codexOnIncelemeGerekliMi`, `insanKapisiGerekliMi`) güvenilir tarafta
