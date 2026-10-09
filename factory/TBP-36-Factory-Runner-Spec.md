@@ -142,6 +142,33 @@ onaylanmadan PASS yoktur. Katalog JSON'unun SHA-256 değeri ve Node
 çağrısının tam argv'si onaylı manifestte sabitlenir;
 bu belge tek başına o manifest değildir.
 
+### Canonical oracle byte önerisi (henüz onaylı manifest değil)
+
+Yukarıdaki JSON bloğundaki dört kayıt sırası ve nesne anahtar sırası korunarak
+`JSON.stringify(kayitlar) + "\n"` üretilir; kodlama UTF-8, BOM ve CR yoktur.
+`kayitlar` yalnız bu dört `{kimlik,girdi,beklenen}` nesnesini içerir. Bu exact
+1153 byte'ın SHA-256 değeri
+`5d7163157bd2f4cb4f3d4f1a3135c37466200c06f85019480ea6e24b54f73209`.
+Bu hash insan tarafından onaylanmış oracle kimliği veya imza değildir; yalnız
+bu taslak byte dizisini yeniden üretmek ve değişikliği fark etmek içindir.
+Her vaka stdin'i ayrı `JSON.stringify(kayit.girdi) + "\n"` byte dizisidir;
+beklenen karşılaştırma nesnesi de trusted tarafta
+`JSON.stringify(kayit.beklenen) + "\n"` ile türetilebilir, fakat stdout'un
+anahtar sırası byte düzeyinde eşit olmak zorunda değildir: strict ayrıştırmadan
+sonra tam alan/tür/değer/dizi sırası karşılaştırılır. Katalog revizyonunda
+anahtar veya vaka sırası değişirse hash yeniden hesaplanır ve yeniden onaylanır.
+
+Önerilen process argv tam olarak
+`["/usr/local/bin/node", "/trusted/risk-contract-bridge.mjs"]`, cwd
+`/workspace/factory` ve stdin yukarıdaki tek vaka byte dizisidir; shell ve
+ek Node bayrağı yoktur. Bridge'in yalnız onaylı
+`/workspace/factory/src/risk-degerlendirme-motoru.mjs` export'unu çağırıp tek
+JSON nesnesi + LF yazması önerilir. Bridge kaynak byte'ları, import kapanışı,
+Node image digest'i ve dış trusted adapter'ın kaynak byte/hash'i henüz
+sabitlenmemiştir. Bridge aday sürecinde çalıştığından PASS kararı veremez;
+`process.exit(0)` ile boş çıktı dâhil bütün gözlem dış adapter'da doğrulanır.
+Bu öneriyle container başlatılmaz ve `UNIT` PASS üretilmez.
+
 Adapter sınırı aday sürecinin dışındadır: trusted orkestratör onaylı oracle
 snapshot'ından her vakayı seçer, stdin byte'larını kendisi oluşturup sayar,
 stdout/stderr byte'larını ayrı sayaçlarla akış sırasında sınırlar ve ham
