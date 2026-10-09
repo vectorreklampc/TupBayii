@@ -82,6 +82,17 @@ gerçek yürütmeyi nasıl kanıtladığı ayrıca olumsuz fixture ile doğrulan
 yazabilir; exit 0 + metin ayrıştırma, her assertion'ın çalıştığının kanıtı
 değildir. Güvenilir sonuç sınırının ve bu davranışlara karşı negatif testin
 tasarımı onaylanmadan `TEST-*-UNIT` PASS'i TBP-237'ye aktarılmaz.
+Sentetik Node 24 karşı örneğinde güvenilir test dosyası aday modülü içe
+aktardı; aday modül `process.exit(0)` çağırdı, dosyadaki zorunlu assertion
+hiç çalışmadı, fakat `node --test` exit 0 ve `tests 1 / pass 1` üretti:
+bu sayı assertion'ı değil test dosyasını temsil ediyordu. Aynı dosyada normal
+adayla zorunlu assertion çalışıp exit 1 verdi. Dolayısıyla mevcut dokuz
+in-process test, yalnız önceden incelemeye alınacak içerik adayıdır; kodun
+kasıtlı olarak test sürecini yönlendirebildiği tehdit modelinde yetkili PASS
+oracle'sı değildir. Daha güçlü iddia için öneri, güvenilir assertion ve
+sonuç gözlemini aday süreç sınırının dışına taşıyan black-box/contract test
+revizyonudur. Bu kapsam değişikliği ve TEST eşlemesi onaylanmadan yalnız
+syntax kontrolü bu açığı kapatmaz; `UNIT` kararı `BLOCKED` kalır.
 
 ## Yalıtım ve sınırlar
 
@@ -120,7 +131,8 @@ Bu koşulların herhangi biri TBP-237 `ACCEPTED` üretmemelidir.
    dosyaların kabul yolu.
 2. Node image digest'i, Docker Desktop/CI hedefindeki yalıtımın gerçek ağ,
    secret, mount ve process-tree negatif test kanıtı.
-3. Test adapter'ının sahte TAP/PASS ve skip'i ayırt eden güven kökü;
+3. In-process dokuz testin adversarial güven sınırını aşan test revizyonu,
+   sahte TAP/PASS, erken exit ve skip'i ayırt eden trusted adapter;
    TBP-237'ye doğrulanmış sonuç biçimi.
 4. 1 MiB sınırı, 7 günlük metadata retention/erişim/silme onayı ve crash
    sonrası tek sahiplik kalıcılığı.
