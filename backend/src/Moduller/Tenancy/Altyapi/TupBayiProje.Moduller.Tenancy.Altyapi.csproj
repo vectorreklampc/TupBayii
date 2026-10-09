@@ -17,4 +17,8 @@
   <ItemGroup>
     <ProjectReference Include="../Domain/TupBayiProje.Moduller.Tenancy.Domain.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="TupBayiProje.EntegrasyonTests" />
+  </ItemGroup>
 </Project>
