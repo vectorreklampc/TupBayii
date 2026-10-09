@@ -54,10 +54,21 @@ ayrı snapshot'lardan geldiği için check her ikisini de kapsar.
 `TEST-TBP-36-FACTORY-UNIT`: argv `--test` ve tablodaki on onaylı test
 dosyasının açık, sıralı listesi; 180 saniye. `test/fixtures` de yalnız onaylı
 snapshot'tan gelir. Wildcard/autodiscovery ve aday test dosyası kullanılmaz.
+Girdi kapanışı yalnız bu iki dizinden ibaret değildir:
+`test/invariant-kapisi.test.mjs` ayrıca `factory/invariants/kayit-defteri.json`,
+`factory/invariants/yurutulebilir-kurallar.json` ve depo kökündeki
+`TupBayiProje_Global_Invariantlar.md` dosyasını okur. Bu üç dosyanın sürümü,
+hash'i ve hangi güven kökünden geleceği onaylı manifestte açıkça yer almalıdır;
+eksik ya da adaydan kendiliğinden alınmış girdiyle PASS üretilmez. Testlerin
+geçici SQLite dosyaları için `os.tmpdir()` ayrı, sınırlı tmpfs'e işaret etmelidir.
 Toplam attempt sınırı 5 dakika. Test kimlikleri, zorunlu sayılar ve
 skip/cancel/flaky kuralı TBP-237 planıyla eşlenmeden exit 0 PASS sayılmaz.
 Test kodu ve TAP/stdout yalnız başına güvenilir kaynak değildir; adapter'ın
 gerçek yürütmeyi nasıl kanıtladığı ayrıca olumsuz fixture ile doğrulanmalıdır.
+Özellikle aday kodu `process.exit(0)` çağırabilir veya stdout'a sahte TAP
+yazabilir; exit 0 + metin ayrıştırma, her assertion'ın çalıştığının kanıtı
+değildir. Güvenilir sonuç sınırının ve bu davranışlara karşı negatif testin
+tasarımı onaylanmadan `TEST-*-UNIT` PASS'i TBP-237'ye aktarılmaz.
 
 ## Yalıtım ve sınırlar
 
@@ -91,7 +102,8 @@ Bu koşulların herhangi biri TBP-237 `ACCEPTED` üretmemelidir.
 ## Açık kararlar ve uygulama kapısı
 
 1. Tablodaki exact dosyalar ve TEST kimliklerinin yetkili oracle revizyonu,
-   fixture hash'leri ve aday yeni dosyaların kabul yolu.
+   fixture ile üç ek normatif girdi dosyasının hash/güven kökü ve aday yeni
+   dosyaların kabul yolu.
 2. Node image digest'i, Docker Desktop/CI hedefindeki yalıtımın gerçek ağ,
    secret, mount ve process-tree negatif test kanıtı.
 3. Test adapter'ının sahte TAP/PASS ve skip'i ayırt eden güven kökü;
