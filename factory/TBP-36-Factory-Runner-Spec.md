@@ -108,18 +108,34 @@ kodu güven kökü değildir: `process.exit(0)` dâhil tüm davranışlar dışa
 yalnız gözlenebilir süreç sonucu sayılır. Yeni public runtime API eklenmez.
 
 Güvenilir dış sınır, her vakada tam bir JSON nesnesi dışında stdout, eksik
-çıktı, ek çıktı, stderr, nonzero/sinyal, timeout veya 1 MiB sınır aşımını
-`BLOCKED` sayar; çıkış 0 tek başına PASS değildir. Beklenen yapıyla alan,
-değer, dizi sırası ve fazla alan dâhil birebir eşleşme aranır. Her vaka ayrı
+çıktı, ek çıktı, stderr, nonzero/sinyal, timeout veya bu contract'a özgü
+4 KiB sınır aşımını `BLOCKED` sayar; çıkış 0 tek başına PASS değildir.
+Bu sınır genel komutlar için önerilen 1 MiB sınırından daha dardır.
+Beklenen yapıyla alan, değer, dizi sırası ve fazla alan dâhil birebir
+eşleşme aranır. Her vaka ayrı
 atılabilir süreç/container'da çalışır; bir vakanın sonucu diğerine taşınmaz.
-Önerilen pozitif vakalar onaylı revizyonda en az şu dört davranışı kapsar:
+Önerilen katalog v1'in tam girdileri ve beklenen sonuçları, mevcut Factory
+risk testlerinden seçilmiştir (JSON anahtarları aşağıdaki sıradadır):
 
-| Girdi sınıfı | Beklenen risk / neden |
-| --- | --- |
-| `docs-only` yazım düzeltmesi | `LOW` / `DOKUMANTASYON_VEYA_STIL` |
-| `concurrency` değişikliği | `HIGH` / `YUKSEK_CONCURRENCY` |
-| `tenant-isolation` mimari değişikliği | `CRITICAL` / `KRITIK_TENANT_IZOLASYONU` |
-| Sayısal etiket içeren bozuk girdi | `MEDIUM` / `RISK_GIRDISI_GECERSIZ` |
+```json
+[
+  {"kimlik":"RISK-01","girdi":{"baslik":"README yazim duzeltmesi","aciklama":"Yalniz metin duzeltilecek.","etiketler":["docs-only"]},"beklenen":{"riskSeviyesi":"LOW","nedenKodlari":["DOKUMANTASYON_VEYA_STIL"],"codexOnIncelemeGerekliMi":false,"insanKapisiGerekliMi":false}},
+  {"kimlik":"RISK-02","girdi":{"baslik":"Eszamanli stok yarisi","aciklama":"Concurrency kontrolunu uygula.","etiketler":["concurrency"]},"beklenen":{"riskSeviyesi":"HIGH","nedenKodlari":["YUKSEK_CONCURRENCY"],"codexOnIncelemeGerekliMi":true,"insanKapisiGerekliMi":false}},
+  {"kimlik":"RISK-03","girdi":{"baslik":"Tenant isolation mimarisini degistir","aciklama":"Veritabani sinirini yeniden tasarla.","etiketler":["tenant-isolation","architecture-change"]},"beklenen":{"riskSeviyesi":"CRITICAL","nedenKodlari":["KRITIK_TENANT_IZOLASYONU"],"codexOnIncelemeGerekliMi":true,"insanKapisiGerekliMi":true}},
+  {"kimlik":"RISK-04","girdi":{"baslik":"Concurrency davranisini degistir","aciklama":"Paralel yarisi engelle.","etiketler":["concurrency",42]},"beklenen":{"riskSeviyesi":"MEDIUM","nedenKodlari":["RISK_GIRDISI_GECERSIZ"],"codexOnIncelemeGerekliMi":false,"insanKapisiGerekliMi":false}}
+]
+```
+
+Her vaka için yalnız `girdi` nesnesi tek UTF-8 JSON satırı ve LF olarak
+stdin'e verilir. Önerilen sınır vaka başına 10 saniye, stdin ve stdout için
+ayrı ayrı 4 KiB; stderr boş olmalıdır. Çıktı tek JSON nesnesi ve tek LF
+olmalıdır; güvenilir katman tam şema ve beklenen değerleri doğrular, tekrar
+eden JSON nesne anahtarını (iç içe nesneler dâhil) ayrıştırma öncesinde tespit
+edip reddeder; yalnız `JSON.parse` bunu kanıtlamaz. Protokol dışı byte da
+reddedilir. Bu denetimin trusted adapter'ı ve negatif fixture'ı ayrıca
+onaylanmadan PASS yoktur. Katalog JSON'unun SHA-256 değeri ve Node
+çağrısının tam argv'si onaylı manifestte sabitlenir;
+bu belge tek başına o manifest değildir.
 
 Beklenen dört alanın tamamı (`riskSeviyesi`, `nedenKodlari`,
 `codexOnIncelemeGerekliMi`, `insanKapisiGerekliMi`) güvenilir tarafta
