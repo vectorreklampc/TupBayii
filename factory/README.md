@@ -254,3 +254,17 @@ Eksik, bilinmeyen, tekrarli veya basarisiz test sonucu issue tamamlamayi
 engeller. Flaky test yalniz kritik degilse, somut gerekce ve bir `TBP-*` takip
 isiyle karantinaya alinabilir. Kritik test karantinasi her durumda engellenir;
 kritik gate bypass edilemez.
+
+## TBP-36 sentetik runner deneyi
+
+`src/sentetik-kalite-runner.mjs`, yalniz modulun icindeki dort sabit Node.js
+senaryosunu ayri surecte, shell kullanmadan ve bos ortamla calistirir. Gercek
+exit 0 yalniz `DENEY_PASS` sonucudur; sahte stdout PASS, nonzero exit, timeout
+ve bilinmeyen komut `BLOCKED` olur. Cikti tutulmaz veya loglanmaz. Bu deney
+TBP-237'nin `ACCEPTED` kapisina baglanmaz ve Jira isini tamamlamaz.
+
+Bu surec ayrimi OS sandbox'i veya dosya sistemi/ag izolasyonu **degildir**.
+Yalniz repo tarafindan sabitlenmis sentetik kodla kullanilir; degistirilebilir
+repository script'leri, kullanici/Claude komutlari ve host credential'lariyla
+calistirilmasi yasaktir. Gercek komut katalogu, izolasyon ve kanit sozlesmesi
+TBP-36'nin ayri onay bekleyen kararlaridir.
