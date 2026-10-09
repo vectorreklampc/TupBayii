@@ -94,6 +94,44 @@ sonuç gözlemini aday süreç sınırının dışına taşıyan black-box/contr
 revizyonudur. Bu kapsam değişikliği ve TEST eşlemesi onaylanmadan yalnız
 syntax kontrolü bu açığı kapatmaz; `UNIT` kararı `BLOCKED` kalır.
 
+## Önerilen ilk black-box contract dilimi (henüz onaylı katalog değil)
+
+`TEST-TBP-36-FACTORY-RISK-CONTRACT` yalnız
+`src/risk-degerlendirme-motoru.mjs` dosyasının mevcut `riskiDegerlendir`
+export'unun seçilmiş gözlenebilir davranışını sınar. Mevcut dokuz testin
+yerine geçmez ve bunlardan PASS türetmez. Aday kaynak değişmez aday SHA'dan
+salt okunur gelir; bu testin girdileri, beklenen JSON sonuçları ve karar kodu
+aday container'ına mount edilmez. Güvenilir orkestratör her vaka için tek
+JSON girdiyi stdin'e verir, container'daki sabit Node çağrısı export'u çağırıp
+JSON sonucu stdout'a yazar. Adayın çalıştığı Node sürecinin içindeki çağrı
+kodu güven kökü değildir: `process.exit(0)` dâhil tüm davranışlar dışarıdan
+yalnız gözlenebilir süreç sonucu sayılır. Yeni public runtime API eklenmez.
+
+Güvenilir dış sınır, her vakada tam bir JSON nesnesi dışında stdout, eksik
+çıktı, ek çıktı, stderr, nonzero/sinyal, timeout veya 1 MiB sınır aşımını
+`BLOCKED` sayar; çıkış 0 tek başına PASS değildir. Beklenen yapıyla alan,
+değer, dizi sırası ve fazla alan dâhil birebir eşleşme aranır. Her vaka ayrı
+atılabilir süreç/container'da çalışır; bir vakanın sonucu diğerine taşınmaz.
+Önerilen pozitif vakalar onaylı revizyonda en az şu dört davranışı kapsar:
+
+| Girdi sınıfı | Beklenen risk / neden |
+| --- | --- |
+| `docs-only` yazım düzeltmesi | `LOW` / `DOKUMANTASYON_VEYA_STIL` |
+| `concurrency` değişikliği | `HIGH` / `YUKSEK_CONCURRENCY` |
+| `tenant-isolation` mimari değişikliği | `CRITICAL` / `KRITIK_TENANT_IZOLASYONU` |
+| Sayısal etiket içeren bozuk girdi | `MEDIUM` / `RISK_GIRDISI_GECERSIZ` |
+
+Beklenen dört alanın tamamı (`riskSeviyesi`, `nedenKodlari`,
+`codexOnIncelemeGerekliMi`, `insanKapisiGerekliMi`) güvenilir tarafta
+karşılaştırılır. Negatif oracle: erken `process.exit(0)` boş çıktı,
+`PASS`/sahte TAP, ek satır, kısmi/bozuk JSON, yanlış nesne, tekrar eden çıktı,
+timeout ve test vakaları arası state sızıntısı ACCEPTED olamaz. Aday girdiyi
+görüp beklenen çıktıyı taklit ederse black-box test bunun iç uygulamasını
+ayırt edemez; iddia yalnız onaylı vakalardaki **gözlenebilir davranıştır**.
+Vaka listesi/hash'i, tam çağrı argv'si, giriş/çıkış boyutu ve süre sınırı,
+güvenilir orkestratör sahipliği ile TBP-237 eşlemesi insan DoR'unda
+sabitlenmeden bu öneri yürütme yetkisi veya `UNIT` PASS'i vermez.
+
 ## Yalıtım ve sınırlar
 
 Her attempt atılabilir Linux container/VM'de, ağ kapalı, sır/token ve host
@@ -133,7 +171,8 @@ Bu koşulların herhangi biri TBP-237 `ACCEPTED` üretmemelidir.
    secret, mount ve process-tree negatif test kanıtı.
 3. In-process dokuz testin adversarial güven sınırını aşan test revizyonu,
    sahte TAP/PASS, erken exit ve skip'i ayırt eden trusted adapter;
-   TBP-237'ye doğrulanmış sonuç biçimi.
+   ilk risk contract vakalarının exact hash/katalog onayı ve TBP-237'ye
+   doğrulanmış sonuç biçimi.
 4. 1 MiB sınırı, 7 günlük metadata retention/erişim/silme onayı ve crash
    sonrası tek sahiplik kalıcılığı.
 
