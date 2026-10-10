@@ -142,6 +142,31 @@ public sealed class DenetimYaziciTests(PostgreSqlKonteyneri postgreSql)
         Assert.Equal(1, await KayitSayisiAsync(adminDizesi, karar.KararKimligi.TestDegeri));
     }
 
+    [Fact]
+    public async Task HassasSentinel_StoreTelemetryVeCallerSonucunaSizmaz()
+    {
+        const string sentinel = "YASAK_SECRET_REF_TOKEN_7f3a";
+        var (adminDizesi, _) = await YaziciHazirlaAsync();
+        var hataliDize = new NpgsqlConnectionStringBuilder(
+            postgreSql.AuditRuntimeBaglantiDizesi(adminDizesi))
+        {
+            Database = sentinel,
+        }.ConnectionString;
+        var yazici = new DenetimYazici(hataliDize, new DenetimYaziciTestKancalari
+        {
+            TestButcesi = TimeSpan.FromSeconds(1),
+        });
+
+        var sonuc = await yazici.YazAsync(IzinKarariOlustur());
+        var telemetry = PreContextAuditTelemetry.BaglamDogrulanamadi(TimeSpan.FromMilliseconds(5));
+        var storeMetni = await TumAuditMetniniOkuAsync(adminDizesi);
+
+        Assert.Equal(DenetimYazmaSonucu.BelirsizGuvenliHata, sonuc);
+        Assert.DoesNotContain(sentinel, sonuc.ToString(), StringComparison.Ordinal);
+        Assert.DoesNotContain(sentinel, string.Join('|', telemetry.Select(cift => $"{cift.Key}={cift.Value}")), StringComparison.Ordinal);
+        Assert.DoesNotContain(sentinel, storeMetni, StringComparison.Ordinal);
+    }
+
     private async Task<(string AdminDizesi, DenetimYazici Yazici)> YaziciHazirlaAsync(
         DenetimYaziciTestKancalari? testKancalari = null)
     {
@@ -175,5 +200,15 @@ public sealed class DenetimYaziciTests(PostgreSqlKonteyneri postgreSql)
             baglanti);
         komut.Parameters.AddWithValue(kararId);
         return (long)(await komut.ExecuteScalarAsync())!;
+    }
+
+    private static async Task<string> TumAuditMetniniOkuAsync(string dize)
+    {
+        await using var baglanti = new NpgsqlConnection(dize);
+        await baglanti.OpenAsync();
+        await using var komut = new NpgsqlCommand(
+            "SELECT coalesce(string_agg(row_to_json(kayit)::text, ''), '') FROM master.denetim_kaydi kayit",
+            baglanti);
+        return (string)(await komut.ExecuteScalarAsync())!;
     }
 }

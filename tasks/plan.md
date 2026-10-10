@@ -23,7 +23,7 @@ Bu plan is listesi icin Jira'nin yerine gecmez.
 - [x] SCRAM bootstrap ve runtime/Tenancy/PUBLIC yetki negatifleri (RED -> GREEN).
 - [x] Yerel transaction, ambient suppression, replay/conflict/concurrency (RED -> GREEN).
 - [x] Unknown-commit reconciliation ve monotonic deadline/hanging-commit (RED -> GREEN).
-- [ ] Telemetry exact allowlist ve hassas sentinel kaniti.
+- [x] Telemetry exact allowlist ve hassas sentinel kaniti.
 - [ ] Tam restore/build/test, diff ve guvenlik incelemesi; Jira kanit yorumu.
 
 ## Out of Scope
