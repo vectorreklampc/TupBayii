@@ -32,6 +32,14 @@ public sealed class DenetimVeritabaniBaglamiModelTests
     }
 
     [Fact]
+    public void ModeliDogrula_GercekDenetimModeli_YalnizDenetimKaydiIleIhlalUretmez()
+    {
+        using var baglam = BaglamOlustur();
+
+        Assert.Empty(MasterVeritabaniBeyazListesi.ModeliDogrula(baglam.Model, [typeof(DenetimKaydi)]));
+    }
+
+    [Fact]
     public void Model_DokuzKolonVeBeklenenTipleriEsler()
     {
         using var baglam = BaglamOlustur();
