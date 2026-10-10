@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/src/Moduller/Audit/">
+    <Project Path="src/Moduller/Audit/Altyapi/TupBayiProje.Moduller.Audit.Altyapi.csproj" />
+  </Folder>
   <Folder Name="/src/Moduller/Tenancy/">
     <Project Path="src/Moduller/Tenancy/Altyapi/TupBayiProje.Moduller.Tenancy.Altyapi.csproj" />
     <Project Path="src/Moduller/Tenancy/Domain/TupBayiProje.Moduller.Tenancy.Domain.csproj" />
