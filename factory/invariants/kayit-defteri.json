@@ -1,5 +1,5 @@
 {
-  "surum": 1,
+  "surum": 2,
   "invariantlar": [
     {
       "kimlik": "INV-TEN-001",
@@ -314,6 +314,19 @@
       "humanGate": false
     },
     {
+      "kimlik": "INV-AUD-005",
+      "sinif": "izlenebilirlik",
+      "tanim": "Her dis istek tek bir trace/correlation kimligiyle butun bilesen adimlarinda uctan uca izlenebilir.",
+      "gerekce": "Kopuk veya eksik correlation kimligi olay incelemesini, audit'i ve tenant sinirli hata analizini imkansiz kilar.",
+      "kaynaklar": ["TBP-233", "SOT-OBS-001"],
+      "ihlalOrnegi": "API gateway'in olusturdugu correlation kimligini arka plan isine veya entegrasyon cagrisina tasimamak.",
+      "dogrulamaYontemi": "trace-propagation-test",
+      "testKimligi": "TEST-INV-AUD-005",
+      "onem": "HIGH",
+      "duzeltme": "Correlation kimligini giriste zorunlu uret/dogrula ve her adimda ayni degerle yay.",
+      "humanGate": false
+    },
+    {
       "kimlik": "INV-GOV-001",
       "sinif": "release-production",
       "tanim": "Kritik degisiklik ve production islemi Human Gate gerektirir.",
@@ -337,6 +350,19 @@
       "testKimligi": "TEST-INV-GOV-002",
       "onem": "CRITICAL",
       "duzeltme": "Degisikligi geri al ve Jira Change Request, ADR, test ve Human Gate iste.",
+      "humanGate": true
+    },
+    {
+      "kimlik": "INV-GOV-003",
+      "sinif": "release-production",
+      "tanim": "Test, acceptance ve smoke kapilarinin tamami PASS olmadan production release yapilamaz.",
+      "gerekce": "Dogrulanmamis surumu production'a almak tenant verisini ve finansal butunlugu geri donusu zor bicimde riske atar.",
+      "kaynaklar": ["TBP-233", "TBP-9"],
+      "ihlalOrnegi": "Smoke sonucu bilinmeyen veya basarisizken production deploy'u tamamlamak.",
+      "dogrulamaYontemi": "release-policy-test",
+      "testKimligi": "TEST-INV-GOV-003",
+      "onem": "CRITICAL",
+      "duzeltme": "Release'i durdur veya geri al; eksik kapilari PASS kanitiyla tamamla ve Human Gate onayi al.",
       "humanGate": true
     }
   ]

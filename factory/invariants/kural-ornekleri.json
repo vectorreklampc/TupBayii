@@ -1,0 +1,748 @@
+{
+  "INV-TEN-001": {
+    "gecerli": [
+      {
+        "tenantVeritabanlari": [
+          { "tenantKimligi": "tenant-ankara", "veritabaniAdi": "tbp_tenant_ankara" },
+          { "tenantKimligi": "tenant-izmir", "veritabaniAdi": "tbp_tenant_izmir" }
+        ]
+      }
+    ],
+    "ihlal": [
+      {
+        "tenantVeritabanlari": [
+          { "tenantKimligi": "tenant-ankara", "veritabaniAdi": "tbp_ortak" },
+          { "tenantKimligi": "tenant-izmir", "veritabaniAdi": "tbp_ortak" }
+        ]
+      }
+    ]
+  },
+  "INV-TEN-002": {
+    "gecerli": [
+      {
+        "masterVarliklari": [
+          { "ad": "tenant_kayitlari", "sahiplik": "CONTROL_PLANE" },
+          { "ad": "lisanslar", "sahiplik": "CONTROL_PLANE" },
+          { "ad": "odeme_durumlari", "sahiplik": "CONTROL_PLANE" }
+        ]
+      }
+    ],
+    "ihlal": [
+      {
+        "masterVarliklari": [
+          { "ad": "tenant_kayitlari", "sahiplik": "CONTROL_PLANE" },
+          { "ad": "stok_hareketleri", "sahiplik": "TENANT_IS_VERISI" }
+        ]
+      }
+    ]
+  },
+  "INV-TEN-003": {
+    "gecerli": [
+      {
+        "istekTenantBeyani": "tenant-izmir",
+        "dogrulanmisKimlikTenanti": "tenant-ankara",
+        "cozulmusTenant": "tenant-ankara"
+      },
+      {
+        "istekTenantBeyani": null,
+        "dogrulanmisKimlikTenanti": "tenant-ankara",
+        "cozulmusTenant": "tenant-ankara"
+      }
+    ],
+    "ihlal": [
+      {
+        "istekTenantBeyani": "tenant-izmir",
+        "dogrulanmisKimlikTenanti": "tenant-ankara",
+        "cozulmusTenant": "tenant-izmir"
+      }
+    ]
+  },
+  "INV-TEN-004": {
+    "gecerli": [
+      {
+        "erisimler": [
+          { "kaynak": "satislar", "tenantBaglami": "tenant-ankara", "sonuc": "IZIN" },
+          { "kaynak": "satislar", "tenantBaglami": null, "sonuc": "RED" }
+        ]
+      }
+    ],
+    "ihlal": [
+      {
+        "erisimler": [
+          { "kaynak": "cari_hareketler", "tenantBaglami": null, "sonuc": "IZIN" }
+        ]
+      }
+    ]
+  },
+  "INV-STK-001": {
+    "gecerli": [
+      {
+        "hareketler": [
+          { "hareketKimligi": "STK-H-1", "tur": "GIRIS", "miktar": 50 },
+          { "hareketKimligi": "STK-H-2", "tur": "SATIS", "miktar": -12 }
+        ],
+        "bakiye": 38
+      },
+      { "hareketler": [], "bakiye": 0 }
+    ],
+    "ihlal": [
+      {
+        "hareketler": [
+          { "hareketKimligi": "STK-H-1", "tur": "GIRIS", "miktar": 50 },
+          { "hareketKimligi": "STK-H-2", "tur": "SATIS", "miktar": -12 }
+        ],
+        "bakiye": 40
+      }
+    ]
+  },
+  "INV-STK-002": {
+    "gecerli": [
+      {
+        "hareketler": [
+          { "hareketKimligi": "STK-H-1", "durum": "FULL", "miktar": 20 },
+          { "hareketKimligi": "STK-H-2", "durum": "EMPTY", "miktar": 5 },
+          { "hareketKimligi": "STK-H-3", "durum": "FULL", "miktar": -3 }
+        ],
+        "bakiyeler": { "FULL": 17, "EMPTY": 5 }
+      }
+    ],
+    "ihlal": [
+      {
+        "hareketler": [
+          { "hareketKimligi": "STK-H-1", "durum": "FULL", "miktar": 20 },
+          { "hareketKimligi": "STK-H-3", "durum": "FULL", "miktar": -3 }
+        ],
+        "bakiyeler": { "FULL": 17, "EMPTY": -17 }
+      }
+    ]
+  },
+  "INV-STK-003": {
+    "gecerli": [
+      {
+        "hareketler": [
+          {
+            "islem": "ARAC_YUKLEME",
+            "kaynak": { "tur": "DEPO", "kimlik": "depo-merkez" },
+            "hedef": { "tur": "ARAC", "kimlik": "arac-06-abc-12" }
+          },
+          {
+            "islem": "KURYE_TESLIMATI",
+            "kaynak": { "tur": "ARAC", "kimlik": "arac-06-abc-12" },
+            "hedef": { "tur": "MUSTERI", "kimlik": "musteri-1001" }
+          }
+        ]
+      }
+    ],
+    "ihlal": [
+      {
+        "hareketler": [
+          {
+            "islem": "KURYE_TESLIMATI",
+            "kaynak": { "tur": "DEPO", "kimlik": "depo-merkez" },
+            "hedef": { "tur": "MUSTERI", "kimlik": "musteri-1001" }
+          }
+        ]
+      }
+    ]
+  },
+  "INV-STK-004": {
+    "gecerli": [
+      {
+        "onceki": [
+          { "kimlik": "STK-H-1", "tur": "SATIS", "miktar": -10, "durum": "TAMAMLANDI" }
+        ],
+        "sonraki": [
+          { "kimlik": "STK-H-1", "tur": "SATIS", "miktar": -10, "durum": "TAMAMLANDI" },
+          { "kimlik": "STK-H-2", "tur": "REVERSAL", "miktar": 10, "durum": "TAMAMLANDI", "referansKimligi": "STK-H-1" }
+        ]
+      }
+    ],
+    "ihlal": [
+      {
+        "onceki": [
+          { "kimlik": "STK-H-1", "tur": "SATIS", "miktar": -10, "durum": "TAMAMLANDI" }
+        ],
+        "sonraki": [
+          { "kimlik": "STK-H-1", "tur": "SATIS", "miktar": -8, "durum": "TAMAMLANDI" }
+        ]
+      },
+      {
+        "onceki": [
+          { "kimlik": "STK-H-1", "tur": "SATIS", "miktar": -10, "durum": "TAMAMLANDI" }
+        ],
+        "sonraki": [
+          { "kimlik": "STK-H-2", "tur": "REVERSAL", "miktar": 10, "durum": "TAMAMLANDI", "referansKimligi": "STK-H-1" }
+        ]
+      }
+    ]
+  },
+  "INV-STK-005": {
+    "gecerli": [
+      {
+        "baslangicStok": 10,
+        "talepler": [
+          { "talepKimligi": "SIP-1", "miktar": 6, "sonuc": "KABUL" },
+          { "talepKimligi": "SIP-2", "miktar": 6, "sonuc": "RED" }
+        ],
+        "sonStok": 4
+      }
+    ],
+    "ihlal": [
+      {
+        "baslangicStok": 10,
+        "talepler": [
+          { "talepKimligi": "SIP-1", "miktar": 6, "sonuc": "KABUL" },
+          { "talepKimligi": "SIP-2", "miktar": 6, "sonuc": "KABUL" }
+        ],
+        "sonStok": -2
+      },
+      {
+        "baslangicStok": 10,
+        "talepler": [
+          { "talepKimligi": "SIP-1", "miktar": 6, "sonuc": "KABUL" }
+        ],
+        "sonStok": -2
+      }
+    ]
+  },
+  "INV-FIN-001": {
+    "gecerli": [
+      {
+        "hareketler": [
+          { "hareketKimligi": "FIN-H-1", "tur": "SATIS_ALACAGI", "miktar": 150000 },
+          { "hareketKimligi": "FIN-H-2", "tur": "TAHSILAT", "miktar": -50000 }
+        ],
+        "bakiye": 100000
+      }
+    ],
+    "ihlal": [
+      {
+        "hareketler": [
+          { "hareketKimligi": "FIN-H-1", "tur": "SATIS_ALACAGI", "miktar": 150000 }
+        ],
+        "bakiye": 120000
+      }
+    ]
+  },
+  "INV-FIN-002": {
+    "gecerli": [
+      {
+        "onceki": [
+          { "kimlik": "FIN-H-1", "tur": "TAHSILAT", "tutarKurus": 50000, "durum": "TAMAMLANDI" }
+        ],
+        "sonraki": [
+          { "kimlik": "FIN-H-1", "tur": "TAHSILAT", "tutarKurus": 50000, "durum": "TAMAMLANDI" },
+          { "kimlik": "FIN-H-2", "tur": "REVERSAL", "tutarKurus": -50000, "durum": "TAMAMLANDI", "referansKimligi": "FIN-H-1" }
+        ]
+      }
+    ],
+    "ihlal": [
+      {
+        "onceki": [
+          { "kimlik": "FIN-H-1", "tur": "TAHSILAT", "tutarKurus": 50000, "durum": "TAMAMLANDI" }
+        ],
+        "sonraki": [
+          { "kimlik": "FIN-H-1", "tur": "TAHSILAT", "tutarKurus": 0, "durum": "IPTAL" }
+        ]
+      },
+      {
+        "onceki": [
+          { "kimlik": "FIN-H-1", "tur": "TAHSILAT", "tutarKurus": 50000, "durum": "TAMAMLANDI" }
+        ],
+        "sonraki": [
+          { "kimlik": "FIN-H-1", "tur": "TAHSILAT", "tutarKurus": 50000, "durum": "TAMAMLANDI" },
+          { "kimlik": "FIN-H-2", "tur": "CORRECTION", "tutarKurus": -5000, "durum": "TAMAMLANDI", "referansKimligi": "FIN-H-9" }
+        ]
+      }
+    ]
+  },
+  "INV-FIN-003": {
+    "gecerli": [
+      { "islemKimligi": "SATIS-1", "etkiler": { "finans": "COMMIT", "stok": "COMMIT", "cari": "COMMIT" } },
+      { "islemKimligi": "SATIS-2", "etkiler": { "finans": "ROLLBACK", "stok": "ROLLBACK", "cari": "ROLLBACK" } }
+    ],
+    "ihlal": [
+      { "islemKimligi": "SATIS-3", "etkiler": { "finans": "COMMIT", "stok": "ROLLBACK", "cari": "COMMIT" } }
+    ]
+  },
+  "INV-FIN-004": {
+    "gecerli": [
+      {
+        "komutlar": [
+          { "komutKimligi": "KMT-1", "tenantKimligi": "tenant-ankara", "idempotencyAnahtari": "satis-2026-0001" },
+          { "komutKimligi": "KMT-1-RETRY", "tenantKimligi": "tenant-ankara", "idempotencyAnahtari": "satis-2026-0001" },
+          { "komutKimligi": "KMT-2", "tenantKimligi": "tenant-izmir", "idempotencyAnahtari": "satis-2026-0001" }
+        ],
+        "etkiler": [
+          { "etkiKimligi": "FIN-H-1", "tenantKimligi": "tenant-ankara", "idempotencyAnahtari": "satis-2026-0001" },
+          { "etkiKimligi": "FIN-H-7", "tenantKimligi": "tenant-izmir", "idempotencyAnahtari": "satis-2026-0001" }
+        ]
+      }
+    ],
+    "ihlal": [
+      {
+        "komutlar": [
+          { "komutKimligi": "KMT-1", "tenantKimligi": "tenant-ankara", "idempotencyAnahtari": "satis-2026-0001" },
+          { "komutKimligi": "KMT-1-RETRY", "tenantKimligi": "tenant-ankara", "idempotencyAnahtari": "satis-2026-0001" }
+        ],
+        "etkiler": [
+          { "etkiKimligi": "FIN-H-1", "tenantKimligi": "tenant-ankara", "idempotencyAnahtari": "satis-2026-0001" },
+          { "etkiKimligi": "FIN-H-2", "tenantKimligi": "tenant-ankara", "idempotencyAnahtari": "satis-2026-0001" }
+        ]
+      }
+    ]
+  },
+  "INV-PAY-001": {
+    "gecerli": [
+      {
+        "odemeBasariliSayildi": true,
+        "kanitKaynagi": "WEBHOOK",
+        "webhookImzasiDogrulandi": true,
+        "masterOdemeDurumuOnayli": true
+      },
+      {
+        "odemeBasariliSayildi": false,
+        "kanitKaynagi": "CLIENT_CALLBACK",
+        "webhookImzasiDogrulandi": false,
+        "masterOdemeDurumuOnayli": false
+      }
+    ],
+    "ihlal": [
+      {
+        "odemeBasariliSayildi": true,
+        "kanitKaynagi": "CLIENT_CALLBACK",
+        "webhookImzasiDogrulandi": false,
+        "masterOdemeDurumuOnayli": false
+      },
+      {
+        "odemeBasariliSayildi": true,
+        "kanitKaynagi": "WEBHOOK",
+        "webhookImzasiDogrulandi": false,
+        "masterOdemeDurumuOnayli": true
+      }
+    ]
+  },
+  "INV-PAY-002": {
+    "gecerli": [
+      {
+        "olaylar": [
+          { "olayKimligi": "evt-1", "saglayiciSirasi": 1, "durum": "BEKLIYOR" },
+          { "olayKimligi": "evt-2", "saglayiciSirasi": 2, "durum": "ODENDI" },
+          { "olayKimligi": "evt-1", "saglayiciSirasi": 1, "durum": "BEKLIYOR" }
+        ],
+        "sonDurum": "ODENDI"
+      }
+    ],
+    "ihlal": [
+      {
+        "olaylar": [
+          { "olayKimligi": "evt-2", "saglayiciSirasi": 2, "durum": "ODENDI" },
+          { "olayKimligi": "evt-1", "saglayiciSirasi": 1, "durum": "BEKLIYOR" }
+        ],
+        "sonDurum": "BEKLIYOR"
+      }
+    ]
+  },
+  "INV-PAY-003": {
+    "gecerli": [
+      {
+        "dogrulanmisOdemeGecisleri": ["odeme-gecis-1"],
+        "lisansAktivasyonlari": [
+          { "lisansKimligi": "lisans-1", "odemeGecisiKimligi": "odeme-gecis-1" }
+        ]
+      }
+    ],
+    "ihlal": [
+      {
+        "dogrulanmisOdemeGecisleri": [],
+        "lisansAktivasyonlari": [
+          { "lisansKimligi": "lisans-1", "odemeGecisiKimligi": null }
+        ]
+      },
+      {
+        "dogrulanmisOdemeGecisleri": ["odeme-gecis-1"],
+        "lisansAktivasyonlari": [
+          { "lisansKimligi": "lisans-2", "odemeGecisiKimligi": "odeme-gecis-9" }
+        ]
+      }
+    ]
+  },
+  "INV-OFF-001": {
+    "gecerli": [
+      {
+        "catismalar": [
+          { "catismaKimligi": "CAT-1", "etkiAlani": "STOK", "cozum": "CONFLICT_REVIEW", "kayitAltinda": true },
+          { "catismaKimligi": "CAT-2", "etkiAlani": "FINANS", "cozum": "DOMAIN_POLITIKASI", "kayitAltinda": true },
+          { "catismaKimligi": "CAT-3", "etkiAlani": "DIGER", "cozum": "SON_YAZAN_KAZANIR", "kayitAltinda": false }
+        ]
+      }
+    ],
+    "ihlal": [
+      {
+        "catismalar": [
+          { "catismaKimligi": "CAT-4", "etkiAlani": "FINANS", "cozum": "SON_YAZAN_KAZANIR", "kayitAltinda": true }
+        ]
+      },
+      {
+        "catismalar": [
+          { "catismaKimligi": "CAT-5", "etkiAlani": "STOK", "cozum": "CONFLICT_REVIEW", "kayitAltinda": false }
+        ]
+      }
+    ]
+  },
+  "INV-OFF-002": {
+    "gecerli": [
+      {
+        "komutlar": [
+          {
+            "zarf": {
+              "komutKimligi": "OFF-KMT-1",
+              "tenantKimligi": "tenant-ankara",
+              "cihazKimligi": "cihaz-tablet-7",
+              "sira": 7,
+              "idempotencyAnahtari": "cihaz-tablet-7:7"
+            },
+            "sunucuSonucu": "KABUL"
+          },
+          { "zarf": { "komutKimligi": "OFF-KMT-2" }, "sunucuSonucu": "RED" }
+        ]
+      }
+    ],
+    "ihlal": [
+      {
+        "komutlar": [
+          {
+            "zarf": {
+              "komutKimligi": "OFF-KMT-3",
+              "tenantKimligi": "tenant-ankara",
+              "sira": 8,
+              "idempotencyAnahtari": "cihaz-tablet-7:8"
+            },
+            "sunucuSonucu": "KABUL"
+          }
+        ]
+      }
+    ]
+  },
+  "INV-OFF-003": {
+    "gecerli": [
+      {
+        "komutlar": [
+          { "komutKimligi": "OFF-KMT-1", "olusturmadaYetkili": true, "syncAnindaYetkili": true, "uygulandi": true },
+          { "komutKimligi": "OFF-KMT-2", "olusturmadaYetkili": true, "syncAnindaYetkili": false, "uygulandi": false }
+        ]
+      }
+    ],
+    "ihlal": [
+      {
+        "komutlar": [
+          { "komutKimligi": "OFF-KMT-3", "olusturmadaYetkili": true, "syncAnindaYetkili": false, "uygulandi": true }
+        ]
+      }
+    ]
+  },
+  "INV-OFF-004": {
+    "gecerli": [
+      {
+        "komutlar": [
+          { "komutKimligi": "OFF-KMT-1", "syncDurumu": "REJECTED", "gosterilenDurum": "REJECTED" },
+          { "komutKimligi": "OFF-KMT-2", "syncDurumu": "SYNCED", "gosterilenDurum": "SYNCED" }
+        ]
+      }
+    ],
+    "ihlal": [
+      {
+        "komutlar": [
+          { "komutKimligi": "OFF-KMT-3", "syncDurumu": "REJECTED", "gosterilenDurum": "SYNCED" }
+        ]
+      }
+    ]
+  },
+  "INV-AUD-001": {
+    "gecerli": [
+      {
+        "kritikIslemler": [
+          { "islemKimligi": "islem-1", "tur": "STOK_DUZELTME" }
+        ],
+        "auditKayitlari": [
+          {
+            "islemKimligi": "islem-1",
+            "aktor": "kullanici-42",
+            "tenantKimligi": "tenant-ankara",
+            "korelasyonKimligi": "kor-7f3a",
+            "zaman": "2026-10-08T10:00:00Z"
+          }
+        ]
+      }
+    ],
+    "ihlal": [
+      {
+        "kritikIslemler": [
+          { "islemKimligi": "islem-2", "tur": "RESTORE" }
+        ],
+        "auditKayitlari": []
+      },
+      {
+        "kritikIslemler": [
+          { "islemKimligi": "islem-3", "tur": "LISANS_AKTIVASYONU" }
+        ],
+        "auditKayitlari": [
+          {
+            "islemKimligi": "islem-3",
+            "aktor": "kullanici-42",
+            "tenantKimligi": "tenant-ankara",
+            "zaman": "2026-10-08T10:00:00Z"
+          }
+        ]
+      }
+    ]
+  },
+  "INV-AUD-002": {
+    "gecerli": [
+      {
+        "onceki": [
+          { "kimlik": "AUD-1", "olay": "STOK_DUZELTME", "aktor": "kullanici-42" }
+        ],
+        "sonraki": [
+          { "kimlik": "AUD-1", "olay": "STOK_DUZELTME", "aktor": "kullanici-42" },
+          { "kimlik": "AUD-2", "olay": "AUDIT_DUZELTME", "aktor": "kullanici-7", "referansKimligi": "AUD-1" }
+        ]
+      }
+    ],
+    "ihlal": [
+      {
+        "onceki": [
+          { "kimlik": "AUD-1", "olay": "STOK_DUZELTME", "aktor": "kullanici-42" }
+        ],
+        "sonraki": [
+          { "kimlik": "AUD-1", "olay": "STOK_DUZELTME", "aktor": "kullanici-7" }
+        ]
+      }
+    ]
+  },
+  "INV-AUD-003": {
+    "gecerli": [
+      {
+        "kayitlar": [
+          { "olay": "GIRIS", "alanlar": { "kullaniciKimligi": "kullanici-42", "sonuc": "BASARILI" } },
+          { "olay": "ODEME", "alanlar": { "kartSonDortHane": "4242", "tutarKurus": 50000 } }
+        ]
+      }
+    ],
+    "ihlal": [
+      {
+        "kayitlar": [
+          { "olay": "GIRIS", "alanlar": { "kullaniciKimligi": "kullanici-42", "parola": "Gizli-123" } }
+        ]
+      },
+      {
+        "kayitlar": [
+          { "olay": "API_ISTEGI", "alanlar": { "baslik": "Bearer abc.def.ghi" } }
+        ]
+      }
+    ]
+  },
+  "INV-AUD-004": {
+    "gecerli": [
+      {
+        "isler": [
+          { "isKimligi": "TBP-233", "risk": "CRITICAL", "durum": "TAMAMLANDI", "testOracleKimligi": "ORACLE-TBP-233" },
+          { "isKimligi": "TBP-10", "risk": "LOW", "durum": "TAMAMLANDI", "testOracleKimligi": null },
+          { "isKimligi": "TBP-11", "risk": "HIGH", "durum": "DEVAM_EDIYOR", "testOracleKimligi": null }
+        ]
+      }
+    ],
+    "ihlal": [
+      {
+        "isler": [
+          { "isKimligi": "TBP-12", "risk": "HIGH", "durum": "TAMAMLANDI", "testOracleKimligi": null }
+        ]
+      }
+    ]
+  },
+  "INV-AUD-005": {
+    "gecerli": [
+      {
+        "istekler": [
+          {
+            "istekKimligi": "istek-1",
+            "korelasyonKimligi": "kor-7f3a",
+            "adimlar": [
+              { "bilesen": "api-gateway", "korelasyonKimligi": "kor-7f3a" },
+              { "bilesen": "satis-servisi", "korelasyonKimligi": "kor-7f3a" },
+              { "bilesen": "outbox-isleyici", "korelasyonKimligi": "kor-7f3a" }
+            ]
+          },
+          {
+            "istekKimligi": "istek-2",
+            "korelasyonKimligi": "kor-91bc",
+            "adimlar": [
+              { "bilesen": "api-gateway", "korelasyonKimligi": "kor-91bc" },
+              { "bilesen": "odeme-webhook-isleyici", "korelasyonKimligi": "kor-91bc" }
+            ]
+          }
+        ]
+      }
+    ],
+    "ihlal": [
+      {
+        "istekler": [
+          {
+            "istekKimligi": "istek-3",
+            "korelasyonKimligi": "kor-7f3a",
+            "adimlar": [
+              { "bilesen": "api-gateway", "korelasyonKimligi": "kor-7f3a" },
+              { "bilesen": "outbox-isleyici" }
+            ]
+          }
+        ]
+      },
+      {
+        "istekler": [
+          {
+            "istekKimligi": "istek-4",
+            "korelasyonKimligi": null,
+            "adimlar": [
+              { "bilesen": "api-gateway", "korelasyonKimligi": null }
+            ]
+          }
+        ]
+      },
+      {
+        "istekler": [
+          {
+            "istekKimligi": "istek-5",
+            "korelasyonKimligi": "kor-ortak",
+            "adimlar": [{ "bilesen": "api-gateway", "korelasyonKimligi": "kor-ortak" }]
+          },
+          {
+            "istekKimligi": "istek-6",
+            "korelasyonKimligi": "kor-ortak",
+            "adimlar": [{ "bilesen": "api-gateway", "korelasyonKimligi": "kor-ortak" }]
+          }
+        ]
+      }
+    ]
+  },
+  "INV-GOV-001": {
+    "gecerli": [
+      {
+        "islemler": [
+          {
+            "tur": "PRODUCTION_DEPLOY",
+            "calistirildi": true,
+            "humanGateOnayi": {
+              "onaylayan": "insan:jira-712020-2dbf3d7f",
+              "zaman": "2026-10-08T13:06:07+03:00",
+              "kanit": "https://ucarmakadil.atlassian.net/browse/TBP-233?focusedCommentId=10842"
+            }
+          },
+          { "tur": "RESTORE", "calistirildi": false, "humanGateOnayi": null },
+          { "tur": "DIGER", "calistirildi": true, "humanGateOnayi": null }
+        ]
+      }
+    ],
+    "ihlal": [
+      {
+        "islemler": [
+          { "tur": "DESTRUCTIVE_MIGRATION", "calistirildi": true, "humanGateOnayi": null }
+        ]
+      },
+      {
+        "islemler": [
+          {
+            "tur": "PRODUCTION_DEPLOY",
+            "calistirildi": true,
+            "humanGateOnayi": {
+              "onaylayan": "insan:claude",
+              "zaman": "2026-10-08T13:06:07+03:00",
+              "kanit": "https://ucarmakadil.atlassian.net/browse/TBP-233?focusedCommentId=10842"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "INV-GOV-002": {
+    "gecerli": [
+      {
+        "degisiklikler": [
+          {
+            "invariantKimligi": "INV-TEN-001",
+            "degisiklikTuru": "DUZELTME",
+            "kanitlar": {
+              "changeRequest": "TBP-300",
+              "etkiVeGeriDonusPlani": "docs/adr/ADR-001-Tenant-Basina-Veritabani.md#geri-donus",
+              "adr": "ADR-001",
+              "testKaniti": "ci:run-42:TEST-INV-TEN-001",
+              "humanGate": "https://ucarmakadil.atlassian.net/browse/TBP-300?focusedCommentId=1"
+            }
+          }
+        ]
+      }
+    ],
+    "ihlal": [
+      {
+        "degisiklikler": [
+          {
+            "invariantKimligi": "INV-TEN-001",
+            "degisiklikTuru": "GEVSETME",
+            "kanitlar": {
+              "changeRequest": "TBP-300",
+              "etkiVeGeriDonusPlani": "docs/adr/ADR-001-Tenant-Basina-Veritabani.md#geri-donus",
+              "testKaniti": "ci:run-42:TEST-INV-TEN-001"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "INV-GOV-003": {
+    "gecerli": [
+      {
+        "releaseler": [
+          {
+            "surum": "1.4.0",
+            "ortam": "PRODUCTION",
+            "yayinlandi": true,
+            "kapilar": { "test": "PASS", "kabul": "PASS", "smoke": "PASS" }
+          },
+          {
+            "surum": "1.5.0-rc.1",
+            "ortam": "STAGING",
+            "yayinlandi": true,
+            "kapilar": { "test": "PASS", "kabul": "BILINMIYOR", "smoke": "FAIL" }
+          },
+          {
+            "surum": "1.5.0",
+            "ortam": "PRODUCTION",
+            "yayinlandi": false,
+            "kapilar": { "test": "PASS", "kabul": "PASS", "smoke": "FAIL" }
+          }
+        ]
+      }
+    ],
+    "ihlal": [
+      {
+        "releaseler": [
+          {
+            "surum": "1.5.0",
+            "ortam": "PRODUCTION",
+            "yayinlandi": true,
+            "kapilar": { "test": "PASS", "kabul": "PASS", "smoke": "BILINMIYOR" }
+          }
+        ]
+      },
+      {
+        "releaseler": [
+          {
+            "surum": "1.5.1",
+            "ortam": "PRODUCTION",
+            "yayinlandi": true,
+            "kapilar": { "test": "FAIL", "kabul": "PASS", "smoke": "PASS" }
+          }
+        ]
+      }
+    ]
+  }
+}

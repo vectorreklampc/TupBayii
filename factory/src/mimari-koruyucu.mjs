@@ -1,10 +1,12 @@
+// INV-* kodlari kanonik invariant kayit defterindedir. Kodlama standardi global
+// invariant degildir; ic standart kimligi STD-KOD-001 ile izlenir.
 export const INVARIANTLAR = Object.freeze([
   Object.freeze({ alan: "databasePerTenant", kod: "INV-TEN-001" }),
   Object.freeze({ alan: "masterDbSiniri", kod: "INV-TEN-002" }),
   Object.freeze({ alan: "tenantCozumleme", kod: "INV-TEN-003" }),
   Object.freeze({ alan: "stokLedger", kod: "INV-STK-001" }),
   Object.freeze({ alan: "odemeOtoritesi", kod: "INV-PAY-001" }),
-  Object.freeze({ alan: "kodlamaStandardi", kod: "INV-CODE-001" }),
+  Object.freeze({ alan: "kodlamaStandardi", kod: "STD-KOD-001" }),
 ]);
 
 export function mimariyiDegerlendir(mimari) {

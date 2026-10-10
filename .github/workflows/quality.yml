@@ -28,6 +28,24 @@ jobs:
         run: npm run check
       - name: Durum makinesi testleri
         run: npm test
+      # Kayit defteri, kurallar, ornekler, Markdown paritesi ve kabul edilmis
+      # risklerin suresi; admin-web braces/GHSA istisnasi 2026-11-07'de BLOCKED olur.
+      - name: Invariant kayit defteri ve uygunluk kapisi
+        run: node src/invariant-kapisi-cli.mjs kayit-defteri
+      - name: Invariant is kalemi pozitif sozlesmesi
+        run: node src/invariant-kapisi-cli.mjs is-kalemi test/fixtures/is-kalemi-gecerli.json
+      - name: Invariant is kalemi negatif sozlesmesi
+        shell: bash
+        run: |
+          set +e
+          node src/invariant-kapisi-cli.mjs is-kalemi test/fixtures/is-kalemi-ihlal.json > "$RUNNER_TEMP/invariant-ihlal.json"
+          kod=$?
+          set -e
+          if [ "$kod" -ne 1 ]; then
+            echo "Ihlal gozlemi BLOCKED (cikis kodu 1) uretmeliydi; alinan: $kod"
+            exit 1
+          fi
+          jq -e '.sonuc == "BLOCKED" and (.nedenKodlari == ["INVARIANT_IHLALI"])' "$RUNNER_TEMP/invariant-ihlal.json"
 
   backend:
     name: Backend build, format, unit ve mimari
@@ -159,9 +177,11 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
-      # GHSA-vfj7-8cjw-p6xm icin upstream yama yoktur. Etkilenen braces,
-      # yalniz repo-kontrollu glob kullanan lint/shadcn gelistirme araclarindadir.
-      # Uretim agaci bloklanir; gecici dev kapsami 2026-11-07'ye kadar yeniden incelenir.
+      # GHSA-vfj7-8cjw-p6xm icin upstream yama yoktur; zafiyet duzeltilmemistir.
+      # Etkilenen braces yalniz repo-kontrollu glob kullanan lint/shadcn gelistirme
+      # araclarindadir. Uretim agaci bloklanir; gelistirme kapsami kabul edilmis
+      # risktir ve factory/invariants/kabul-edilmis-riskler.json kaydi 2026-11-07'de
+      # factory kapisini BLOCKED yapar.
       - name: Uretim bagimliliklarini guvenlik denetiminden gecir
         run: npm audit --omit=dev --audit-level=high
 

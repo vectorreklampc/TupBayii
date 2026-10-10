@@ -1,3 +1,5 @@
+import { invariantKanitlariniDegerlendir } from "./invariant-kapisi.mjs";
+
 export const TEST_PIRAMIDI = Object.freeze({
   HIZLI_GERI_BILDIRIM: Object.freeze([
     "UNIT",
@@ -176,6 +178,7 @@ export function kaliteKapisiniDegerlendir(girdi) {
   if ([...planTestleri.keys()].some((kimlik) => !sonucSayilari.has(kimlik))) {
     bulgular.push(bulgu("TEST_SONUCU_EKSIK", "testSonuclari"));
   }
+  bulgular.push(...invariantBulgulari(girdi, plan, sonuclar));
 
   const kapsama = kapsamaOlustur(plan, sonuclar);
   return bulgular.length === 0
@@ -187,6 +190,41 @@ export function kaliteKapisiniDegerlendir(girdi) {
         kapsama,
       }
     : engelliKapi(tekilBulgular(bulgular), kapsama);
+}
+
+// Plan izlenebilirligindeki INV-* kaynaklari is kaleminin ilgili invariantlaridir.
+// Her biri kayitli TEST-INV-* testiyle planlanir, karantinaya alinamaz ve ayni
+// is/yurutmeye bagli gozlem kanitiyla invariant kapisindan gecmelidir.
+function invariantBulgulari(girdi, plan, sonuclar) {
+  const ilgili = plan.izlenebilirlik.filter(({ kaynakKimligi }) => kaynakKimligi.startsWith("INV-"));
+  if (ilgili.length === 0) return [];
+
+  const bulgular = [];
+  for (const { kaynakKimligi, testKimlikleri } of ilgili) {
+    const invariantTesti = `TEST-${kaynakKimligi}`;
+    if (!testKimlikleri.includes(invariantTesti)) {
+      bulgular.push(bulgu("INVARIANT_TESTI_PLANDA_YOK", `plan.izlenebilirlik.${kaynakKimligi}`));
+    } else if (sonuclar.some((sonuc) => sonuc?.testKimligi === invariantTesti && sonuc.durum === "FLAKY")) {
+      bulgular.push(bulgu("INVARIANT_TESTI_KARANTINA_YASAK", `testSonuclari.${invariantTesti}`));
+    }
+  }
+  const degerlendirme = invariantKanitlariniDegerlendir({
+    isKimligi: kendiAlani(girdi, "isKimligi"),
+    calistirmaKimligi: kendiAlani(girdi, "calistirmaKimligi"),
+    ilgiliInvariantlar: ilgili.map(({ kaynakKimligi }) => kaynakKimligi),
+    kanitlar: kendiAlani(girdi, "invariantKanitlari"),
+  });
+  for (const { invariantKimligi, nedenKodu } of degerlendirme.bulgular) {
+    bulgular.push(bulgu(
+      nedenKodu,
+      invariantKimligi ? `invariantKanitlari.${invariantKimligi}` : "invariantKanitlari",
+    ));
+  }
+  return bulgular;
+}
+
+function kendiAlani(nesne, alan) {
+  return Object.hasOwn(nesne, alan) ? nesne[alan] : undefined;
 }
 
 function gecerliKriterMetniMi(kriter) {
@@ -260,20 +298,27 @@ function bulgu(kod, alan) {
   return { kod, alan };
 }
 
+// Ayni kod farkli alanlarda (ornegin iki invariant) ayri bulgu olarak kalir;
+// nedenKodlari tekil kod listesidir.
 function tekilBulgular(bulgular) {
   const gorulen = new Set();
-  return bulgular.filter(({ kod }) => {
-    if (gorulen.has(kod)) return false;
-    gorulen.add(kod);
+  return bulgular.filter(({ kod, alan }) => {
+    const anahtar = `${kod}\u0000${alan}`;
+    if (gorulen.has(anahtar)) return false;
+    gorulen.add(anahtar);
     return true;
   });
+}
+
+function nedenKodlari(bulgular) {
+  return [...new Set(bulgular.map(({ kod }) => kod))];
 }
 
 function engelliPlan(bulgular) {
   const tekil = tekilBulgular(bulgular);
   return {
     sonuc: "BLOCKED",
-    nedenKodlari: tekil.map(({ kod }) => kod),
+    nedenKodlari: nedenKodlari(tekil),
     bulgular: tekil,
   };
 }
@@ -282,7 +327,7 @@ function engelliKapi(bulgular, kapsama) {
   return {
     sonuc: "BLOCKED",
     tamamlanabilirMi: false,
-    nedenKodlari: bulgular.map(({ kod }) => kod),
+    nedenKodlari: nedenKodlari(bulgular),
     bulgular,
     kapsama,
   };

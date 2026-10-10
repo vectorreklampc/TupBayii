@@ -74,18 +74,50 @@ restart sonrasi devam etmeyi ve kalici idempotent retry davranisini kanitlar.
 tanimlar repository kokundeki `TupBayiProje_Global_Invariantlar.md` dosyasinda
 kalir; test iki kaynagin kimliklerini birebir esler.
 
-`src/invariant-kapisi.mjs`, her invariant icin dis kalite kapisinin urettigi
-kaniti alir. Yalniz butun kayitlar `KANITLANDI` ise `ACCEPTED` verir. `IHLAL`,
-`BILINMIYOR`, eksik kanit, bilinmeyen invariant veya bozuk kayit defteri
-fail-closed `BLOCKED` sonucudur. Kanit kayitli `testKimligi` ile eslesir;
-`CRITICAL` kayit ayrica acik Human Gate onay kaniti tasir. Bos veya eksiltilmis
-kanonik manifest kabul edilmez. Kapi mimari/security/domain testinin yerine
-gecmez; bu testlerin sonuclarini kalici invariant kimlikleriyle toplar.
+`src/invariant-kapisi.mjs` iki acik modda fail-closed calisir:
 
-Her HIGH/CRITICAL kayit icin declarative kural
-`invariants/yurutulebilir-kurallar.json`, pozitif ve ihlal girdisi
-`test/fixtures/invariant-kanitlari.json` icinde bulunur. Fixture kapsami ve
-metadata drift'i `test/invariant-kapisi.test.mjs` ile dogrulanir.
+- Kayit defteri/uygunluk modu (`uygunluguDogrula`): strict kayit defteri semasi,
+  koddaki immutable `KANONIK_MANIFEST` (kimlik, sira, onem, Human Gate), her
+  invariant icin `invariants/yurutulebilir-kurallar.json` predikati, her
+  predikatin `invariants/kural-ornekleri.json` icindeki domain bicimli pozitif
+  ornekte `KANITLANDI` ve ihlal orneginde `IHLAL` uretmesi, normatif Markdown
+  baslik/token paritesi ve `invariants/kabul-edilmis-riskler.json` istisnalarinin
+  suresi birlikte gecmelidir.
+- Is kalemi modu (`invariantKanitlariniDegerlendir`): yalniz ilgili
+  invariantlar icin, ayni `isKimligi` ve `calistirmaKimligi`ye bagli, kayitli
+  `testKimligi` ile eslesen yurutulmus test `gozlem`i kabul edilir. Kapi beyan
+  edilen sonuca guvenmez; gozlemi semantik predikata uygular. Eksik, bilinmeyen,
+  ilgisiz, bozuk, eski, eslesmeyen, kanitlanamayan veya ihlal eden kanit ve
+  `CRITICAL` kayitta ise/invariant'a bagli insan Human Gate onayi olmamasi
+  `BLOCKED` sonucudur.
+
+Tamamlama kapisinin sahibi `src/kabul-testi-catisi.mjs` icindeki
+`kaliteKapisiniDegerlendir`'dir. Kabul kriterlerinde kaynak gosterilen her
+`INV-*` ilgili invarianttir: plan kayitli `TEST-INV-*` testini icermeli, bu
+test karantinaya alinamaz ve is kalemi modu `ACCEPTED` olmadan
+`tamamlanabilirMi` `true` olmaz. Kapi yalniz saglanan yurutulmus kaniti
+degerlendirir; henuz uygulanmamis tenant/stok/finans/urun alanlarinin uyumlu
+oldugunu beyan etmez.
+
+Kabul edilmis risk istisnasi duzeltme veya `PASS` degildir. Admin Web
+`braces` / `GHSA-vfj7-8cjw-p6xm` gelistirme bagimliligi istisnasi
+`KABUL_EDILMIS_RISK`, `duzeltildi: false` olarak tutulur ve 2026-11-07 (UTC)
+gununden itibaren kayit defteri modu `BLOCKED` olur.
+
+Komut satiri kanonik dosyalari `import.meta.url` uzerinden cozer; her calisma
+dizininden ayni sonucu verir. Cikis kodu `0` ACCEPTED, `1` BLOCKED, `2`
+kullanim hatasidir:
+
+```powershell
+node src/invariant-kapisi-cli.mjs kayit-defteri
+node src/invariant-kapisi-cli.mjs is-kalemi test/fixtures/is-kalemi-gecerli.json
+```
+
+`is-kalemi` girdisi `isKimligi`, `calistirmaKimligi`, `testOracle`,
+`kabulKriterleri`, `testSonuclari` ve `invariantKanitlari` tasir; test plani
+istemciden alinmaz, kabul kriterlerinden yeniden derlenir. CI factory isi
+kayit defteri modunu ve is kalemi modunun pozitif/negatif sozlesmesini gercek
+komutla calistirir.
 
 ## Rollback ve recovery
 
@@ -131,7 +163,8 @@ korur:
   authoritative degildir.
 - `INV-STK-001`: Fiziksel stok yalniz movement ledger ile degisir.
 - `INV-PAY-001`: Odeme authority dogrulanmis webhook ve Master DB state'idir.
-- `INV-CODE-001`: Domain kodu Turkce anlamli ASCII adlandirma kullanir.
+- `STD-KOD-001`: Domain kodu Turkce anlamli ASCII adlandirma kullanir. Bu bir
+  global invariant degil, ic kodlama standardi kimligidir.
 
 Her invariant kaydi `durum: UYGUN | IHLAL` ve en az bir metin `kanitlar`
 degeri tasir. Bilinmeyen durum, eksik/bozuk kanit veya eksik girdi fail-closed

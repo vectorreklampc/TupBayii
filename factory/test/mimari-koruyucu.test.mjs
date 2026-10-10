@@ -99,7 +99,14 @@ describe("Architecture Guardian", () => {
     const sonuc = mimariyiDegerlendir(mimari);
 
     assert.equal(sonuc.sonuc, "BLOCKED");
-    assert.deepEqual(sonuc.invariantKodlari, ["INV-TEN-002", "INV-CODE-001"]);
+    assert.deepEqual(sonuc.invariantKodlari, ["INV-TEN-002", "STD-KOD-001"]);
+  });
+
+  test("kodlama standardi global invariant namespace'ini kullanmaz", () => {
+    assert.deepEqual(
+      INVARIANTLAR.map(({ kod }) => kod),
+      ["INV-TEN-001", "INV-TEN-002", "INV-TEN-003", "INV-STK-001", "INV-PAY-001", "STD-KOD-001"],
+    );
   });
 
   test("bozuk girdiyi tum invariantlar icin fail-closed reddeder", () => {

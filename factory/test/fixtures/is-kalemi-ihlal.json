@@ -1,0 +1,70 @@
+{
+  "isKimligi": "TBP-233",
+  "calistirmaKimligi": "github-actions:18000000001:1",
+  "testOracle": {
+    "kimlik": "ORACLE-TBP-233",
+    "surum": "1",
+    "ozet": "Dis istek izi ve production release kapilari gozlemlenen davranisla dogrulanir"
+  },
+  "kabulKriterleri": [
+    {
+      "kimlik": "AC-TBP-233-01",
+      "bicim": "GHERKIN",
+      "given": "API gateway'den giren bir satis istegi ve production release adayi",
+      "when": "istek butun bilesenlerden gecer ve release yayinlanir",
+      "then": "ayni correlation kimligi her adimda bulunur ve uc release kapisi PASS'tir",
+      "riskSeviyesi": "KRITIK",
+      "kaynakKimlikleri": ["REQ-TBP-233-01", "INV-AUD-005", "INV-GOV-003"],
+      "testler": [
+        { "kimlik": "TEST-INV-AUD-005", "tur": "INTEGRATION" },
+        { "kimlik": "TEST-INV-GOV-003", "tur": "SMOKE" }
+      ]
+    }
+  ],
+  "testSonuclari": [
+    { "testKimligi": "TEST-INV-AUD-005", "durum": "PASS" },
+    { "testKimligi": "TEST-INV-GOV-003", "durum": "PASS" }
+  ],
+  "invariantKanitlari": {
+    "INV-AUD-005": {
+      "testKimligi": "TEST-INV-AUD-005",
+      "isKimligi": "TBP-233",
+      "calistirmaKimligi": "github-actions:18000000001:1",
+      "gozlem": {
+        "istekler": [
+          {
+            "istekKimligi": "istek-1",
+            "korelasyonKimligi": "kor-7f3a",
+            "adimlar": [
+              { "bilesen": "api-gateway", "korelasyonKimligi": "kor-7f3a" },
+              { "bilesen": "outbox-isleyici" }
+            ]
+          }
+        ]
+      }
+    },
+    "INV-GOV-003": {
+      "testKimligi": "TEST-INV-GOV-003",
+      "isKimligi": "TBP-233",
+      "calistirmaKimligi": "github-actions:18000000001:1",
+      "gozlem": {
+        "releaseler": [
+          {
+            "surum": "1.5.0",
+            "ortam": "PRODUCTION",
+            "yayinlandi": true,
+            "kapilar": { "test": "PASS", "kabul": "PASS", "smoke": "BILINMIYOR" }
+          }
+        ]
+      },
+      "humanGate": {
+        "durum": "ONAYLANDI",
+        "invariantKimligi": "INV-GOV-003",
+        "isKimligi": "TBP-233",
+        "onaylayan": "insan:jira-712020-2dbf3d7f",
+        "zaman": "2026-10-08T13:06:07+03:00",
+        "kanit": "https://ucarmakadil.atlassian.net/browse/TBP-233?focusedCommentId=10842"
+      }
+    }
+  }
+}
