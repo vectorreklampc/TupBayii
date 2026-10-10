@@ -56,6 +56,21 @@ namespace TupBayiProje.Moduller.Tenancy.Altyapi.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            // Guvenlik degismezi: Down yalniz bos, atilabilir DB'de calisir; tenant verisi DROP ile kaybolamaz.
+            // Tablolar once kilitlenir, boylece kontrol ile DROP arasinda eszamanli INSERT araya giremez.
+            // Satir varsa DROP'tan once hata verilir; migration transaction'i geri alinir, sema ve gecmis korunur.
+            migrationBuilder.Sql("""
+                DO $$
+                BEGIN
+                    LOCK TABLE master.tenant, master.tenant_veritabani IN ACCESS EXCLUSIVE MODE;
+                    IF EXISTS (SELECT 1 FROM master.tenant) OR EXISTS (SELECT 1 FROM master.tenant_veritabani) THEN
+                        RAISE EXCEPTION 'TBP-59: master tenant tablolari bos degil; MasterTenantIlkSema geri alinamaz.'
+                            USING ERRCODE = 'object_not_in_prerequisite_state';
+                    END IF;
+                END
+                $$;
+                """);
+
             migrationBuilder.DropTable(
                 name: "tenant_veritabani",
                 schema: "master");
