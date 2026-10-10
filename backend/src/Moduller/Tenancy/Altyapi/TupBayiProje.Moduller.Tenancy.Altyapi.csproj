@@ -19,4 +19,8 @@
     <ProjectReference Include="../Sozlesmeler/TupBayiProje.Moduller.Tenancy.Sozlesmeler.csproj" />
     <ProjectReference Include="../Uygulama/TupBayiProje.Moduller.Tenancy.Uygulama.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="TupBayiProje.EntegrasyonTests" />
+  </ItemGroup>
 </Project>
