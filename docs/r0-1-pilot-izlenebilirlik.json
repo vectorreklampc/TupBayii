@@ -1,0 +1,1196 @@
+{
+  "sourceOfTruth": "Jira",
+  "figmaFile": "unveOhyF2AlrBYA34ez6x6",
+  "releasePath": [
+    {
+      "release": "R0.1",
+      "scope": "Windows + Android (yalniz online)"
+    },
+    {
+      "release": "R0.2",
+      "scope": "iOS"
+    },
+    {
+      "release": "R0.3",
+      "scope": "Offline sync/conflict, filo/kurye"
+    },
+    {
+      "release": "R1.0",
+      "scope": "e-Fatura, abonelik otomasyonu, 100+ tenant, fabrika genellestirme"
+    }
+  ],
+  "outOfScope": [
+    "iOS",
+    "offline sync/conflict",
+    "filo/kurye",
+    "e-Fatura",
+    "abonelik otomasyonu",
+    "100+ tenant",
+    "fabrika genellestirme"
+  ],
+  "rows": [
+    {
+      "id": "windows-login",
+      "platform": "windows",
+      "flow": "login",
+      "requirements": [
+        "TBP-249",
+        "TBP-255"
+      ],
+      "pilotJira": "TBP-249",
+      "platformJira": "TBP-255",
+      "mainPlanJira": [
+        "TBP-60",
+        "TBP-61",
+        "TBP-62",
+        "TBP-65",
+        "TBP-74",
+        "TBP-75",
+        "TBP-76",
+        "TBP-77",
+        "TBP-78",
+        "TBP-79",
+        "TBP-80",
+        "TBP-81",
+        "TBP-82",
+        "TBP-83"
+      ],
+      "apiBehaviors": [
+        "login-open",
+        "login-close",
+        "login-revoke"
+      ],
+      "openapi": {
+        "operationIds": [],
+        "schemas": []
+      },
+      "figma": {
+        "file": "unveOhyF2AlrBYA34ez6x6",
+        "nodes": []
+      },
+      "states": {
+        "loading": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "empty": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "validation": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "permission": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "networkError": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "success": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        }
+      },
+      "testOracle": {
+        "status": "MISSING",
+        "ids": []
+      },
+      "readiness": "BLOCKED",
+      "humanApproval": false,
+      "blockers": [
+        "contracts/openapi.json paths bos ve securitySchemes yok: gercek operationId/schema yok.",
+        "Jira api davranislari yerel olarak kopyalanmadi; canli Jira kaydindan okunmadan business karar uydurulmaz.",
+        "Required state Figma node'lari dogrulanamadi (Figma View kotasi doldu); 6 state UNVERIFIED.",
+        "Insan onayi yok (humanApproval=false).",
+        "Bu platform-akis icin Figma node kaniti yok."
+      ]
+    },
+    {
+      "id": "windows-musteri",
+      "platform": "windows",
+      "flow": "musteri",
+      "requirements": [
+        "TBP-250",
+        "TBP-255"
+      ],
+      "pilotJira": "TBP-250",
+      "platformJira": "TBP-255",
+      "mainPlanJira": [
+        "TBP-85",
+        "TBP-86",
+        "TBP-87",
+        "TBP-88",
+        "TBP-89",
+        "TBP-90",
+        "TBP-91",
+        "TBP-92",
+        "TBP-93",
+        "TBP-94",
+        "TBP-95",
+        "TBP-96",
+        "TBP-97",
+        "TBP-98",
+        "TBP-99",
+        "TBP-100",
+        "TBP-101",
+        "TBP-102",
+        "TBP-103",
+        "TBP-104"
+      ],
+      "apiBehaviors": [
+        "musteri-create",
+        "musteri-update",
+        "musteri-deactivate",
+        "musteri-search-by-phone"
+      ],
+      "openapi": {
+        "operationIds": [],
+        "schemas": []
+      },
+      "figma": {
+        "file": "unveOhyF2AlrBYA34ez6x6",
+        "nodes": [
+          {
+            "id": "7:2",
+            "name": "Musteri ana",
+            "status": "CANDIDATE"
+          },
+          {
+            "id": "8:2",
+            "name": "Yeni musteri",
+            "status": "CANDIDATE"
+          },
+          {
+            "id": "70:2",
+            "name": "Musteri detay",
+            "status": "CANDIDATE"
+          },
+          {
+            "id": "7:187",
+            "name": "Cari",
+            "status": "CANDIDATE"
+          }
+        ]
+      },
+      "states": {
+        "loading": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "empty": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "validation": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "permission": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "networkError": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "success": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        }
+      },
+      "testOracle": {
+        "status": "MISSING",
+        "ids": []
+      },
+      "readiness": "BLOCKED",
+      "humanApproval": false,
+      "blockers": [
+        "contracts/openapi.json paths bos ve securitySchemes yok: gercek operationId/schema yok.",
+        "Jira api davranislari yerel olarak kopyalanmadi; canli Jira kaydindan okunmadan business karar uydurulmaz.",
+        "Required state Figma node'lari dogrulanamadi (Figma View kotasi doldu); 6 state UNVERIFIED.",
+        "Insan onayi yok (humanApproval=false).",
+        "Aday Figma node'lari bu turde dogrulanamadi; VERIFIED degil."
+      ]
+    },
+    {
+      "id": "windows-urunFiyat",
+      "platform": "windows",
+      "flow": "urunFiyat",
+      "requirements": [
+        "TBP-250",
+        "TBP-255"
+      ],
+      "pilotJira": "TBP-250",
+      "platformJira": "TBP-255",
+      "mainPlanJira": [
+        "TBP-85",
+        "TBP-86",
+        "TBP-87",
+        "TBP-88",
+        "TBP-89",
+        "TBP-90",
+        "TBP-91",
+        "TBP-92",
+        "TBP-93",
+        "TBP-94",
+        "TBP-95",
+        "TBP-96",
+        "TBP-97",
+        "TBP-98",
+        "TBP-99",
+        "TBP-100",
+        "TBP-101",
+        "TBP-102",
+        "TBP-103",
+        "TBP-104"
+      ],
+      "apiBehaviors": [
+        "urun-list",
+        "urun-current-price"
+      ],
+      "openapi": {
+        "operationIds": [],
+        "schemas": []
+      },
+      "figma": {
+        "file": "unveOhyF2AlrBYA34ez6x6",
+        "nodes": [
+          {
+            "id": "41:246",
+            "name": "Fiyat/depozito",
+            "status": "CANDIDATE"
+          }
+        ]
+      },
+      "states": {
+        "loading": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "empty": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "validation": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "permission": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "networkError": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "success": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        }
+      },
+      "testOracle": {
+        "status": "MISSING",
+        "ids": []
+      },
+      "readiness": "BLOCKED",
+      "humanApproval": false,
+      "blockers": [
+        "contracts/openapi.json paths bos ve securitySchemes yok: gercek operationId/schema yok.",
+        "Jira api davranislari yerel olarak kopyalanmadi; canli Jira kaydindan okunmadan business karar uydurulmaz.",
+        "Required state Figma node'lari dogrulanamadi (Figma View kotasi doldu); 6 state UNVERIFIED.",
+        "Insan onayi yok (humanApproval=false).",
+        "Aday Figma node'lari bu turde dogrulanamadi; VERIFIED degil."
+      ]
+    },
+    {
+      "id": "windows-satis",
+      "platform": "windows",
+      "flow": "satis",
+      "requirements": [
+        "TBP-252",
+        "TBP-255"
+      ],
+      "pilotJira": "TBP-252",
+      "platformJira": "TBP-255",
+      "mainPlanJira": [
+        "TBP-100",
+        "TBP-118",
+        "TBP-119",
+        "TBP-120",
+        "TBP-121",
+        "TBP-122",
+        "TBP-123",
+        "TBP-124",
+        "TBP-125",
+        "TBP-126",
+        "TBP-127",
+        "TBP-128"
+      ],
+      "apiBehaviors": [
+        "satis-complete-cash",
+        "satis-complete-current-account",
+        "satis-cancel"
+      ],
+      "openapi": {
+        "operationIds": [],
+        "schemas": []
+      },
+      "figma": {
+        "file": "unveOhyF2AlrBYA34ez6x6",
+        "nodes": [
+          {
+            "id": "4:2",
+            "name": "POS ana",
+            "status": "VERIFIED"
+          },
+          {
+            "id": "7:609",
+            "name": "Odeme/tamamlama",
+            "status": "VERIFIED"
+          },
+          {
+            "id": "8:169",
+            "name": "Yetersiz stok",
+            "status": "VERIFIED"
+          },
+          {
+            "id": "8:211",
+            "name": "Kredi limiti",
+            "status": "VERIFIED"
+          }
+        ]
+      },
+      "states": {
+        "loading": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "empty": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "validation": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "permission": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "networkError": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "success": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        }
+      },
+      "testOracle": {
+        "status": "MISSING",
+        "ids": []
+      },
+      "readiness": "BLOCKED",
+      "humanApproval": false,
+      "blockers": [
+        "contracts/openapi.json paths bos ve securitySchemes yok: gercek operationId/schema yok.",
+        "Jira api davranislari yerel olarak kopyalanmadi; canli Jira kaydindan okunmadan business karar uydurulmaz.",
+        "Required state Figma node'lari dogrulanamadi (Figma View kotasi doldu); 6 state UNVERIFIED.",
+        "Insan onayi yok (humanApproval=false)."
+      ]
+    },
+    {
+      "id": "windows-stok",
+      "platform": "windows",
+      "flow": "stok",
+      "requirements": [
+        "TBP-251",
+        "TBP-255"
+      ],
+      "pilotJira": "TBP-251",
+      "platformJira": "TBP-255",
+      "mainPlanJira": [
+        "TBP-106",
+        "TBP-107",
+        "TBP-108",
+        "TBP-109",
+        "TBP-110",
+        "TBP-111",
+        "TBP-112",
+        "TBP-113",
+        "TBP-114",
+        "TBP-115",
+        "TBP-116"
+      ],
+      "apiBehaviors": [
+        "stok-list",
+        "stok-movement-history",
+        "stok-authorized-correction",
+        "stok-sale-effect",
+        "stok-empty-return-effect"
+      ],
+      "openapi": {
+        "operationIds": [],
+        "schemas": []
+      },
+      "figma": {
+        "file": "unveOhyF2AlrBYA34ez6x6",
+        "nodes": [
+          {
+            "id": "7:390",
+            "name": "Stok ana",
+            "status": "VERIFIED"
+          },
+          {
+            "id": "8:87",
+            "name": "Sayim farki",
+            "status": "VERIFIED"
+          }
+        ]
+      },
+      "states": {
+        "loading": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "empty": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "validation": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "permission": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "networkError": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "success": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        }
+      },
+      "testOracle": {
+        "status": "MISSING",
+        "ids": []
+      },
+      "readiness": "BLOCKED",
+      "humanApproval": false,
+      "blockers": [
+        "contracts/openapi.json paths bos ve securitySchemes yok: gercek operationId/schema yok.",
+        "Jira api davranislari yerel olarak kopyalanmadi; canli Jira kaydindan okunmadan business karar uydurulmaz.",
+        "Required state Figma node'lari dogrulanamadi (Figma View kotasi doldu); 6 state UNVERIFIED.",
+        "Insan onayi yok (humanApproval=false)."
+      ]
+    },
+    {
+      "id": "windows-kasaOzeti",
+      "platform": "windows",
+      "flow": "kasaOzeti",
+      "requirements": [
+        "TBP-253",
+        "TBP-255"
+      ],
+      "pilotJira": "TBP-253",
+      "platformJira": "TBP-255",
+      "mainPlanJira": [
+        "TBP-142",
+        "TBP-143",
+        "TBP-146",
+        "TBP-147",
+        "TBP-149",
+        "TBP-150",
+        "TBP-151"
+      ],
+      "apiBehaviors": [
+        "kasa-daily-summary",
+        "kasa-opening",
+        "kasa-day-end-count"
+      ],
+      "openapi": {
+        "operationIds": [],
+        "schemas": []
+      },
+      "figma": {
+        "file": "unveOhyF2AlrBYA34ez6x6",
+        "nodes": []
+      },
+      "states": {
+        "loading": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "empty": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "validation": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "permission": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "networkError": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "success": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        }
+      },
+      "testOracle": {
+        "status": "MISSING",
+        "ids": []
+      },
+      "readiness": "BLOCKED",
+      "humanApproval": false,
+      "blockers": [
+        "contracts/openapi.json paths bos ve securitySchemes yok: gercek operationId/schema yok.",
+        "Jira api davranislari yerel olarak kopyalanmadi; canli Jira kaydindan okunmadan business karar uydurulmaz.",
+        "Required state Figma node'lari dogrulanamadi (Figma View kotasi doldu); 6 state UNVERIFIED.",
+        "Insan onayi yok (humanApproval=false).",
+        "Bu platform-akis icin Figma node kaniti yok."
+      ]
+    },
+    {
+      "id": "android-login",
+      "platform": "android",
+      "flow": "login",
+      "requirements": [
+        "TBP-249",
+        "TBP-256"
+      ],
+      "pilotJira": "TBP-249",
+      "platformJira": "TBP-256",
+      "mainPlanJira": [
+        "TBP-60",
+        "TBP-61",
+        "TBP-62",
+        "TBP-65",
+        "TBP-74",
+        "TBP-75",
+        "TBP-76",
+        "TBP-77",
+        "TBP-78",
+        "TBP-79",
+        "TBP-80",
+        "TBP-81",
+        "TBP-82",
+        "TBP-83"
+      ],
+      "apiBehaviors": [
+        "login-open",
+        "login-close",
+        "login-revoke"
+      ],
+      "openapi": {
+        "operationIds": [],
+        "schemas": []
+      },
+      "figma": {
+        "file": "unveOhyF2AlrBYA34ez6x6",
+        "nodes": []
+      },
+      "states": {
+        "loading": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "empty": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "validation": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "permission": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "networkError": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "success": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        }
+      },
+      "testOracle": {
+        "status": "MISSING",
+        "ids": []
+      },
+      "readiness": "BLOCKED",
+      "humanApproval": false,
+      "blockers": [
+        "contracts/openapi.json paths bos ve securitySchemes yok: gercek operationId/schema yok.",
+        "Jira api davranislari yerel olarak kopyalanmadi; canli Jira kaydindan okunmadan business karar uydurulmaz.",
+        "Required state Figma node'lari dogrulanamadi (Figma View kotasi doldu); 6 state UNVERIFIED.",
+        "Insan onayi yok (humanApproval=false).",
+        "Bu platform-akis icin Figma node kaniti yok.",
+        "R0.1 Android sadece online; offline sync/conflict R0.3."
+      ]
+    },
+    {
+      "id": "android-musteri",
+      "platform": "android",
+      "flow": "musteri",
+      "requirements": [
+        "TBP-250",
+        "TBP-256"
+      ],
+      "pilotJira": "TBP-250",
+      "platformJira": "TBP-256",
+      "mainPlanJira": [
+        "TBP-85",
+        "TBP-86",
+        "TBP-87",
+        "TBP-88",
+        "TBP-89",
+        "TBP-90",
+        "TBP-91",
+        "TBP-92",
+        "TBP-93",
+        "TBP-94",
+        "TBP-95",
+        "TBP-96",
+        "TBP-97",
+        "TBP-98",
+        "TBP-99",
+        "TBP-100",
+        "TBP-101",
+        "TBP-102",
+        "TBP-103",
+        "TBP-104"
+      ],
+      "apiBehaviors": [
+        "musteri-create",
+        "musteri-update",
+        "musteri-deactivate",
+        "musteri-search-by-phone"
+      ],
+      "openapi": {
+        "operationIds": [],
+        "schemas": []
+      },
+      "figma": {
+        "file": "unveOhyF2AlrBYA34ez6x6",
+        "nodes": [
+          {
+            "id": "34:2",
+            "name": "Mobil musteri",
+            "status": "CANDIDATE"
+          }
+        ]
+      },
+      "states": {
+        "loading": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "empty": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "validation": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "permission": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "networkError": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "success": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        }
+      },
+      "testOracle": {
+        "status": "MISSING",
+        "ids": []
+      },
+      "readiness": "BLOCKED",
+      "humanApproval": false,
+      "blockers": [
+        "contracts/openapi.json paths bos ve securitySchemes yok: gercek operationId/schema yok.",
+        "Jira api davranislari yerel olarak kopyalanmadi; canli Jira kaydindan okunmadan business karar uydurulmaz.",
+        "Required state Figma node'lari dogrulanamadi (Figma View kotasi doldu); 6 state UNVERIFIED.",
+        "Insan onayi yok (humanApproval=false).",
+        "Aday Figma node'lari bu turde dogrulanamadi; VERIFIED degil.",
+        "R0.1 Android sadece online; offline sync/conflict R0.3."
+      ]
+    },
+    {
+      "id": "android-urunFiyat",
+      "platform": "android",
+      "flow": "urunFiyat",
+      "requirements": [
+        "TBP-250",
+        "TBP-256"
+      ],
+      "pilotJira": "TBP-250",
+      "platformJira": "TBP-256",
+      "mainPlanJira": [
+        "TBP-85",
+        "TBP-86",
+        "TBP-87",
+        "TBP-88",
+        "TBP-89",
+        "TBP-90",
+        "TBP-91",
+        "TBP-92",
+        "TBP-93",
+        "TBP-94",
+        "TBP-95",
+        "TBP-96",
+        "TBP-97",
+        "TBP-98",
+        "TBP-99",
+        "TBP-100",
+        "TBP-101",
+        "TBP-102",
+        "TBP-103",
+        "TBP-104"
+      ],
+      "apiBehaviors": [
+        "urun-list",
+        "urun-current-price"
+      ],
+      "openapi": {
+        "operationIds": [],
+        "schemas": []
+      },
+      "figma": {
+        "file": "unveOhyF2AlrBYA34ez6x6",
+        "nodes": []
+      },
+      "states": {
+        "loading": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "empty": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "validation": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "permission": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "networkError": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "success": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        }
+      },
+      "testOracle": {
+        "status": "MISSING",
+        "ids": []
+      },
+      "readiness": "BLOCKED",
+      "humanApproval": false,
+      "blockers": [
+        "contracts/openapi.json paths bos ve securitySchemes yok: gercek operationId/schema yok.",
+        "Jira api davranislari yerel olarak kopyalanmadi; canli Jira kaydindan okunmadan business karar uydurulmaz.",
+        "Required state Figma node'lari dogrulanamadi (Figma View kotasi doldu); 6 state UNVERIFIED.",
+        "Insan onayi yok (humanApproval=false).",
+        "Bu platform-akis icin Figma node kaniti yok.",
+        "R0.1 Android sadece online; offline sync/conflict R0.3."
+      ]
+    },
+    {
+      "id": "android-satis",
+      "platform": "android",
+      "flow": "satis",
+      "requirements": [
+        "TBP-252",
+        "TBP-256"
+      ],
+      "pilotJira": "TBP-252",
+      "platformJira": "TBP-256",
+      "mainPlanJira": [
+        "TBP-100",
+        "TBP-118",
+        "TBP-119",
+        "TBP-120",
+        "TBP-121",
+        "TBP-122",
+        "TBP-123",
+        "TBP-124",
+        "TBP-125",
+        "TBP-126",
+        "TBP-127",
+        "TBP-128"
+      ],
+      "apiBehaviors": [
+        "satis-complete-cash",
+        "satis-complete-current-account",
+        "satis-cancel"
+      ],
+      "openapi": {
+        "operationIds": [],
+        "schemas": []
+      },
+      "figma": {
+        "file": "unveOhyF2AlrBYA34ez6x6",
+        "nodes": []
+      },
+      "states": {
+        "loading": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "empty": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "validation": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "permission": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "networkError": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "success": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        }
+      },
+      "testOracle": {
+        "status": "MISSING",
+        "ids": []
+      },
+      "readiness": "BLOCKED",
+      "humanApproval": false,
+      "blockers": [
+        "contracts/openapi.json paths bos ve securitySchemes yok: gercek operationId/schema yok.",
+        "Jira api davranislari yerel olarak kopyalanmadi; canli Jira kaydindan okunmadan business karar uydurulmaz.",
+        "Required state Figma node'lari dogrulanamadi (Figma View kotasi doldu); 6 state UNVERIFIED.",
+        "Insan onayi yok (humanApproval=false).",
+        "Bu platform-akis icin Figma node kaniti yok.",
+        "R0.1 Android sadece online; offline sync/conflict R0.3."
+      ]
+    },
+    {
+      "id": "android-stok",
+      "platform": "android",
+      "flow": "stok",
+      "requirements": [
+        "TBP-251",
+        "TBP-256"
+      ],
+      "pilotJira": "TBP-251",
+      "platformJira": "TBP-256",
+      "mainPlanJira": [
+        "TBP-106",
+        "TBP-107",
+        "TBP-108",
+        "TBP-109",
+        "TBP-110",
+        "TBP-111",
+        "TBP-112",
+        "TBP-113",
+        "TBP-114",
+        "TBP-115",
+        "TBP-116"
+      ],
+      "apiBehaviors": [
+        "stok-list",
+        "stok-movement-history",
+        "stok-authorized-correction",
+        "stok-sale-effect",
+        "stok-empty-return-effect"
+      ],
+      "openapi": {
+        "operationIds": [],
+        "schemas": []
+      },
+      "figma": {
+        "file": "unveOhyF2AlrBYA34ez6x6",
+        "nodes": []
+      },
+      "states": {
+        "loading": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "empty": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "validation": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "permission": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "networkError": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "success": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        }
+      },
+      "testOracle": {
+        "status": "MISSING",
+        "ids": []
+      },
+      "readiness": "BLOCKED",
+      "humanApproval": false,
+      "blockers": [
+        "contracts/openapi.json paths bos ve securitySchemes yok: gercek operationId/schema yok.",
+        "Jira api davranislari yerel olarak kopyalanmadi; canli Jira kaydindan okunmadan business karar uydurulmaz.",
+        "Required state Figma node'lari dogrulanamadi (Figma View kotasi doldu); 6 state UNVERIFIED.",
+        "Insan onayi yok (humanApproval=false).",
+        "Bu platform-akis icin Figma node kaniti yok.",
+        "R0.1 Android sadece online; offline sync/conflict R0.3."
+      ]
+    },
+    {
+      "id": "android-kasaOzeti",
+      "platform": "android",
+      "flow": "kasaOzeti",
+      "requirements": [
+        "TBP-253",
+        "TBP-256"
+      ],
+      "pilotJira": "TBP-253",
+      "platformJira": "TBP-256",
+      "mainPlanJira": [
+        "TBP-142",
+        "TBP-143",
+        "TBP-146",
+        "TBP-147",
+        "TBP-149",
+        "TBP-150",
+        "TBP-151"
+      ],
+      "apiBehaviors": [
+        "kasa-daily-summary",
+        "kasa-opening",
+        "kasa-day-end-count"
+      ],
+      "openapi": {
+        "operationIds": [],
+        "schemas": []
+      },
+      "figma": {
+        "file": "unveOhyF2AlrBYA34ez6x6",
+        "nodes": []
+      },
+      "states": {
+        "loading": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "empty": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "validation": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "permission": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "networkError": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        },
+        "success": {
+          "status": "UNVERIFIED",
+          "figmaNode": null
+        }
+      },
+      "testOracle": {
+        "status": "MISSING",
+        "ids": []
+      },
+      "readiness": "BLOCKED",
+      "humanApproval": false,
+      "blockers": [
+        "contracts/openapi.json paths bos ve securitySchemes yok: gercek operationId/schema yok.",
+        "Jira api davranislari yerel olarak kopyalanmadi; canli Jira kaydindan okunmadan business karar uydurulmaz.",
+        "Required state Figma node'lari dogrulanamadi (Figma View kotasi doldu); 6 state UNVERIFIED.",
+        "Insan onayi yok (humanApproval=false).",
+        "Bu platform-akis icin Figma node kaniti yok.",
+        "R0.1 Android sadece online; offline sync/conflict R0.3."
+      ]
+    }
+  ],
+  "apiBehaviors": [
+    {
+      "id": "login-open",
+      "sourceJira": "TBP-249",
+      "summary": "Login ac",
+      "operationId": null,
+      "schemas": []
+    },
+    {
+      "id": "login-close",
+      "sourceJira": "TBP-249",
+      "summary": "Login kapat",
+      "operationId": null,
+      "schemas": []
+    },
+    {
+      "id": "login-revoke",
+      "sourceJira": "TBP-249",
+      "summary": "Login revoke",
+      "operationId": null,
+      "schemas": []
+    },
+    {
+      "id": "musteri-create",
+      "sourceJira": "TBP-250",
+      "summary": "Musteri olustur",
+      "operationId": null,
+      "schemas": []
+    },
+    {
+      "id": "musteri-update",
+      "sourceJira": "TBP-250",
+      "summary": "Musteri guncelle",
+      "operationId": null,
+      "schemas": []
+    },
+    {
+      "id": "musteri-deactivate",
+      "sourceJira": "TBP-250",
+      "summary": "Musteri pasife al",
+      "operationId": null,
+      "schemas": []
+    },
+    {
+      "id": "musteri-search-by-phone",
+      "sourceJira": "TBP-250",
+      "summary": "Telefonla musteri ara",
+      "operationId": null,
+      "schemas": []
+    },
+    {
+      "id": "urun-list",
+      "sourceJira": "TBP-250",
+      "summary": "Urun listesi",
+      "operationId": null,
+      "schemas": []
+    },
+    {
+      "id": "urun-current-price",
+      "sourceJira": "TBP-250",
+      "summary": "Urun guncel fiyat",
+      "operationId": null,
+      "schemas": []
+    },
+    {
+      "id": "stok-list",
+      "sourceJira": "TBP-251",
+      "summary": "Stok listesi",
+      "operationId": null,
+      "schemas": []
+    },
+    {
+      "id": "stok-movement-history",
+      "sourceJira": "TBP-251",
+      "summary": "Stok hareket gecmisi",
+      "operationId": null,
+      "schemas": []
+    },
+    {
+      "id": "stok-authorized-correction",
+      "sourceJira": "TBP-251",
+      "summary": "Yetkili stok duzeltme",
+      "operationId": null,
+      "schemas": []
+    },
+    {
+      "id": "stok-sale-effect",
+      "sourceJira": "TBP-251",
+      "summary": "Satis stok etkisi",
+      "operationId": null,
+      "schemas": []
+    },
+    {
+      "id": "stok-empty-return-effect",
+      "sourceJira": "TBP-251",
+      "summary": "Bos iade stok etkisi",
+      "operationId": null,
+      "schemas": []
+    },
+    {
+      "id": "satis-complete-cash",
+      "sourceJira": "TBP-252",
+      "summary": "Satis tamamla (nakit)",
+      "operationId": null,
+      "schemas": []
+    },
+    {
+      "id": "satis-complete-current-account",
+      "sourceJira": "TBP-252",
+      "summary": "Satis tamamla (cari hesap)",
+      "operationId": null,
+      "schemas": []
+    },
+    {
+      "id": "satis-cancel",
+      "sourceJira": "TBP-252",
+      "summary": "Satis iptal",
+      "operationId": null,
+      "schemas": []
+    },
+    {
+      "id": "kasa-daily-summary",
+      "sourceJira": "TBP-253",
+      "summary": "Gunluk ozet",
+      "operationId": null,
+      "schemas": []
+    },
+    {
+      "id": "kasa-opening",
+      "sourceJira": "TBP-253",
+      "summary": "Kasa acilis",
+      "operationId": null,
+      "schemas": []
+    },
+    {
+      "id": "kasa-day-end-count",
+      "sourceJira": "TBP-253",
+      "summary": "Gun sonu sayim",
+      "operationId": null,
+      "schemas": []
+    }
+  ]
+}
