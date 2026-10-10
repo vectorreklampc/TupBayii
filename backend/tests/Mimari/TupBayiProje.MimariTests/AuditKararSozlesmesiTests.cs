@@ -1,6 +1,7 @@
 using System.Reflection;
 using TupBayiProje.Moduller.Audit.Altyapi;
 using TupBayiProje.Moduller.Tenancy.Domain;
+using TupBayiProje.Moduller.Tenancy.Uygulama;
 using Xunit;
 
 namespace TupBayiProje.MimariTests;
@@ -44,5 +45,5 @@ public sealed class AuditKararSozlesmesiTests
 
     private static DenetimKarari IzinKarariOlustur() =>
         DenetimKarariFabrikasi.IzinKarariOlustur(
-            DogrulanmisTenantBaglami.TenanttenOlustur(Tenant.Olustur()));
+            SentetikTenantBaglamiCozucu.Coz(Tenant.Olustur()));
 }

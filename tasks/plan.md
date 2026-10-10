@@ -21,7 +21,7 @@ Bu plan is listesi icin Jira'nin yerine gecmez.
 - [x] Domain kontrati, opaque UUIDv7 kimlikleri ve model exact-set testleri (RED -> GREEN).
 - [x] Audit DbContext, migration, dokuz kolon ve truth-table testleri (RED -> GREEN).
 - [x] SCRAM bootstrap ve runtime/Tenancy/PUBLIC yetki negatifleri (RED -> GREEN).
-- [ ] Yerel transaction, ambient suppression, replay/conflict/concurrency (RED -> GREEN).
+- [x] Yerel transaction, ambient suppression, replay/conflict/concurrency (RED -> GREEN).
 - [ ] Unknown-commit reconciliation ve monotonic deadline/hanging-commit (RED -> GREEN).
 - [ ] Telemetry exact allowlist ve hassas sentinel kaniti.
 - [ ] Tam restore/build/test, diff ve guvenlik incelemesi; Jira kanit yorumu.

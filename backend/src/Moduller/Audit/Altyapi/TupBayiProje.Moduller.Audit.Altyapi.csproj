@@ -15,6 +15,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../Tenancy/Domain/TupBayiProje.Moduller.Tenancy.Domain.csproj" />
+    <ProjectReference Include="../../Tenancy/Sozlesmeler/TupBayiProje.Moduller.Tenancy.Sozlesmeler.csproj" />
   </ItemGroup>
 </Project>

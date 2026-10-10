@@ -103,7 +103,7 @@ internal static class MimariKuralMotoru
                 continue;
             }
 
-            var masterBaglamiVar = proje.BaglamAdlari.Any(BirMasterBaglamiMi);
+            var masterBaglamiVar = proje.BaglamAdlari.Any(ad => BirMasterBaglamiMi(proje.Ad, ad));
             var tenantBaglamiVar = proje.BaglamAdlari.Any(BirTenantBaglamiMi);
 
             if (masterBaglamiVar && tenantBaglamiVar)
@@ -171,8 +171,10 @@ internal static class MimariKuralMotoru
             _ => false,
         };
 
-    private static bool BirMasterBaglamiMi(string ad) =>
-        ad.EndsWith("MasterVeritabaniBaglami", StringComparison.Ordinal);
+    private static bool BirMasterBaglamiMi(string projeAdi, string ad) =>
+        ad.EndsWith("MasterVeritabaniBaglami", StringComparison.Ordinal)
+        || (projeAdi.Equals("TupBayiProje.Moduller.Audit.Altyapi", StringComparison.Ordinal)
+            && ad.Equals("DenetimVeritabaniBaglami", StringComparison.Ordinal));
 
     private static bool BirTenantBaglamiMi(string ad) =>
         ad.EndsWith("TenantVeritabaniBaglami", StringComparison.Ordinal);

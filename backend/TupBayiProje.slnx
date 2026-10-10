@@ -5,6 +5,8 @@
   <Folder Name="/src/Moduller/Tenancy/">
     <Project Path="src/Moduller/Tenancy/Altyapi/TupBayiProje.Moduller.Tenancy.Altyapi.csproj" />
     <Project Path="src/Moduller/Tenancy/Domain/TupBayiProje.Moduller.Tenancy.Domain.csproj" />
+    <Project Path="src/Moduller/Tenancy/Sozlesmeler/TupBayiProje.Moduller.Tenancy.Sozlesmeler.csproj" />
+    <Project Path="src/Moduller/Tenancy/Uygulama/TupBayiProje.Moduller.Tenancy.Uygulama.csproj" />
   </Folder>
   <Folder Name="/src/Sunum/">
     <Project Path="src/Sunum/TupBayiProje.Api/TupBayiProje.Api.csproj" />
