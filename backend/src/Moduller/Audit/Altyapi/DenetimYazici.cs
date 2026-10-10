@@ -30,6 +30,8 @@ internal sealed class DenetimYaziciTestKancalari
 
 internal enum DenetimTemizlikAdimi
 {
+    OkuyucuDispose,
+    KomutDispose,
     Rollback,
     TransactionDispose,
     BaglantiDispose,
@@ -95,6 +97,7 @@ internal sealed class DenetimYazici
 
         NpgsqlConnection? baglanti = null;
         NpgsqlTransaction? transaction = null;
+        NpgsqlCommand? komut = null;
         var commitTamamlandi = false;
         var uzlastirilmali = false;
         var sonuc = DenetimYazmaSonucu.BelirsizGuvenliHata;
@@ -105,7 +108,8 @@ internal sealed class DenetimYazici
             transaction = await baglanti.BeginTransactionAsync(
                 System.Data.IsolationLevel.ReadCommitted,
                 deadline.Token);
-            await KaydiEkleAsync(baglanti, transaction, karar, deadline);
+            komut = KayitKomutuOlustur(baglanti, transaction, karar, deadline);
+            await komut.ExecuteNonQueryAsync(deadline.Token);
 
             // Bu noktadan sonraki her kesinti ambiguous'tur.
             uzlastirilmali = true;
@@ -133,7 +137,7 @@ internal sealed class DenetimYazici
         }
         finally
         {
-            await TemizligiBekleAsync(baglanti, transaction, commitTamamlandi, deadline.Token);
+            await TemizligiBekleAsync(baglanti, transaction, commitTamamlandi, komut, null, deadline.Token);
         }
 
         if (sonuc == DenetimYazmaSonucu.Kalici)
@@ -151,7 +155,8 @@ internal sealed class DenetimYazici
         return await UzlastirAsync(karar, deadline);
     }
 
-    private static async Task KaydiEkleAsync(
+    // Komutun dispose'u cagiranin cleanup zincirine aittir.
+    private static NpgsqlCommand KayitKomutuOlustur(
         NpgsqlConnection baglanti,
         NpgsqlTransaction transaction,
         DenetimKarari karar,
@@ -162,7 +167,7 @@ internal sealed class DenetimYazici
                 (id, karar_id, tenant_id, correlation_id, islem, sonuc, gerekce_kodu)
             VALUES ($1, $2, $3, $4, $5, $6, $7)
             """;
-        await using var komut = new NpgsqlCommand(sql, baglanti, transaction)
+        var komut = new NpgsqlCommand(sql, baglanti, transaction)
         {
             CommandTimeout = deadline.KomutZamanAsimiSaniyesi,
         };
@@ -177,7 +182,7 @@ internal sealed class DenetimYazici
             NpgsqlDbType = NpgsqlDbType.Varchar,
             Value = karar.GerekceKodu is null ? DBNull.Value : karar.GerekceKodu,
         });
-        await komut.ExecuteNonQueryAsync(deadline.Token);
+        return komut;
     }
 
     private async Task<DenetimYazmaSonucu> UzlastirAsync(
@@ -185,6 +190,8 @@ internal sealed class DenetimYazici
         MonotonicDeadline deadline)
     {
         NpgsqlConnection? baglanti = null;
+        NpgsqlCommand? komut = null;
+        NpgsqlDataReader? okuyucu = null;
         DenetimYazmaSonucu sonuc = DenetimYazmaSonucu.BelirsizGuvenliHata;
         try
         {
@@ -200,12 +207,12 @@ internal sealed class DenetimYazici
                 FROM master.denetim_kaydi
                 WHERE karar_id = $1
                 """;
-            await using var komut = new NpgsqlCommand(sql, baglanti)
+            komut = new NpgsqlCommand(sql, baglanti)
             {
                 CommandTimeout = deadline.KomutZamanAsimiSaniyesi,
             };
             komut.Parameters.AddWithValue(karar.KararKimligi.Deger);
-            await using var okuyucu = await komut.ExecuteReaderAsync(deadline.Token);
+            okuyucu = await komut.ExecuteReaderAsync(deadline.Token);
             if (await okuyucu.ReadAsync(deadline.Token))
             {
                 var ayni =
@@ -224,22 +231,24 @@ internal sealed class DenetimYazici
         }
         finally
         {
-            await TemizligiBekleAsync(baglanti, null, false, deadline.Token);
+            await TemizligiBekleAsync(baglanti, null, false, komut, okuyucu, deadline.Token);
         }
 
         return deadline.Aktif ? sonuc : DenetimYazmaSonucu.BelirsizGuvenliHata;
     }
 
-    // Tek sirali cleanup zinciri yalniz bir kez deadline ile beklenir. Deadline dolarsa caller
-    // fail-closed devam eder; zincir arka planda kendi sirasiyla biter ve ayni baglantida ikinci
-    // operasyon baslatilmaz.
+    // Okuyucu, komut, transaction ve baglanti dispose'lari tek sirali cleanup zincirindedir ve zincir
+    // yalniz bir kez deadline ile beklenir. Deadline dolarsa caller fail-closed devam eder; zincir arka
+    // planda kendi sirasiyla biter ve ayni baglantida ikinci operasyon baslatilmaz.
     private async Task TemizligiBekleAsync(
         NpgsqlConnection? baglanti,
         NpgsqlTransaction? transaction,
         bool transactionTamamlandi,
+        NpgsqlCommand? komut,
+        NpgsqlDataReader? okuyucu,
         CancellationToken deadlineToken)
     {
-        var zincir = TemizleAsync(baglanti, transaction, transactionTamamlandi, deadlineToken);
+        var zincir = TemizleAsync(baglanti, transaction, transactionTamamlandi, komut, okuyucu, deadlineToken);
         try
         {
             await zincir.WaitAsync(deadlineToken);
@@ -260,8 +269,25 @@ internal sealed class DenetimYazici
         NpgsqlConnection? baglanti,
         NpgsqlTransaction? transaction,
         bool transactionTamamlandi,
+        NpgsqlCommand? komut,
+        NpgsqlDataReader? okuyucu,
         CancellationToken deadlineToken)
     {
+        // Okuyucu dispose'u kalan sonuc mesajlarini tokensiz tuketir; bu yuzden zincirin ilk adimidir.
+        if (okuyucu is not null)
+        {
+            await AdimAsync(
+                DenetimTemizlikAdimi.OkuyucuDispose,
+                () => okuyucu.DisposeAsync().AsTask());
+        }
+
+        if (komut is not null)
+        {
+            await AdimAsync(
+                DenetimTemizlikAdimi.KomutDispose,
+                () => komut.DisposeAsync().AsTask());
+        }
+
         if (transaction is not null)
         {
             if (!transactionTamamlandi)

@@ -3,6 +3,7 @@ using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using TupBayiProje.Moduller.Audit.Altyapi;
+using TupBayiProje.Moduller.Tenancy.Altyapi;
 using TupBayiProje.Moduller.Tenancy.Domain;
 using TupBayiProje.Moduller.Tenancy.Uygulama;
 using TupBayiProje.Api;
@@ -121,15 +122,7 @@ public sealed class DenetimYaziciTests(PostgreSqlKonteyneri postgreSql)
     [Fact]
     public async Task HostCompositionRoot_TenancyTenantindenAuditKarariKalicilastirir()
     {
-        var adminDizesi = await postgreSql.BosVeritabaniOlusturAsync();
-        await using var tenancyBaglami = PostgreSqlKonteyneri.BaglamOlustur(adminDizesi);
-        await tenancyBaglami.Database.MigrateAsync();
-        tenancyBaglami.Add(Tenant.Olustur());
-        await tenancyBaglami.SaveChangesAsync();
-        await using var auditBaglami = PostgreSqlKonteyneri.DenetimBaglamiOlustur(adminDizesi);
-        await auditBaglami.Database.MigrateAsync();
-        await PostgreSqlKonteyneri.AuditYetkileriniUygulaAsync(adminDizesi);
-        await PostgreSqlKonteyneri.TenancyOkumaYetkisiniUygulaAsync(adminDizesi);
+        var adminDizesi = await MasterHazirlaAsync(Tenant.Olustur());
 
         var sonuc = await AuditCompositionRoot.SentetikIzinKarariYazAsync(
             postgreSql.TenancyRuntimeBaglantiDizesi(adminDizesi),
@@ -140,6 +133,73 @@ public sealed class DenetimYaziciTests(PostgreSqlKonteyneri postgreSql)
         await baglanti.OpenAsync();
         await using var komut = new NpgsqlCommand("SELECT count(*) FROM master.denetim_kaydi", baglanti);
         Assert.Equal(1, (long)(await komut.ExecuteScalarAsync())!);
+    }
+
+    // Satir gizliligi veya production izolasyonu iddiasi degildir; yalniz tek writer'in atfi ve karismama kanitidir.
+    [Fact]
+    public async Task HostCompositionRoot_AyniMasterdakiIkiTenantinIzinVeRetKararlariniKarismadanAtfeder()
+    {
+        var tenantA = Tenant.Olustur();
+        var tenantB = Tenant.Olustur();
+        var masterDizesi = await MasterHazirlaAsync(tenantA, tenantB);
+        var auditRuntimeDizesi = postgreSql.AuditRuntimeBaglantiDizesi(masterDizesi);
+
+        var baglamlar = await SentetikTenantBaglamiSaglayici.TumunuCozAsync(
+            postgreSql.TenancyRuntimeBaglantiDizesi(masterDizesi));
+
+        // Sira deterministiktir: Master'in kendi uuid siralamasi oracle'dir.
+        Assert.Equal(
+            await TenantKimlikleriniSiraliOkuAsync(masterDizesi),
+            baglamlar.Select(baglam => baglam.TenantId));
+        var izinBaglami = Assert.Single(baglamlar, baglam => baglam.TenantId == tenantA.Id);
+        var retBaglami = Assert.Single(baglamlar, baglam => baglam.TenantId == tenantB.Id);
+        Assert.Equal(
+            DenetimYazmaSonucu.Kalici,
+            await AuditCompositionRoot.IzinKarariYazAsync(izinBaglami, auditRuntimeDizesi));
+        Assert.Equal(
+            DenetimYazmaSonucu.Kalici,
+            await AuditCompositionRoot.ReddetKarariYazAsync(retBaglami, auditRuntimeDizesi, "SECRET_BULUNAMADI"));
+
+        var satirlar = await AuditSatirlariniOkuAsync(masterDizesi);
+        Assert.Equal(2, satirlar.Length);
+        var izin = Assert.Single(satirlar, satir => satir.TenantId == tenantA.Id);
+        var ret = Assert.Single(satirlar, satir => satir.TenantId == tenantB.Id);
+        Assert.Equal(
+            ("audit_runtime", "TENANT_SECRET_OKUMA_KARARI", "IZIN_VERILDI", (string?)null),
+            (izin.ServisKimligi, izin.Islem, izin.Sonuc, izin.GerekceKodu));
+        Assert.Equal(
+            ("audit_runtime", "TENANT_SECRET_OKUMA_KARARI", "REDDEDILDI", (string?)"SECRET_BULUNAMADI"),
+            (ret.ServisKimligi, ret.Islem, ret.Sonuc, ret.GerekceKodu));
+        Assert.NotEqual(izin.KararId, ret.KararId);
+        Assert.NotEqual(izin.CorrelationId, ret.CorrelationId);
+    }
+
+    [Fact]
+    public async Task TenancySaglayici_SentetikTenantYoksaTumunuCozFailClosedOlur()
+    {
+        var masterDizesi = await MasterHazirlaAsync();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            SentetikTenantBaglamiSaglayici.TumunuCozAsync(postgreSql.TenancyRuntimeBaglantiDizesi(masterDizesi)));
+    }
+
+    [Fact]
+    public async Task HostCompositionRoot_TenantBaglamiDogrulanamazsa_HamBaglantiVerisiSizdirmadanBelirsizDoner()
+    {
+        const string sentinel = "yasak_baglanti_ref_7f3a";
+        var (adminDizesi, _) = await YaziciHazirlaAsync();
+        var hataliMasterDizesi = new NpgsqlConnectionStringBuilder(
+            postgreSql.TenancyRuntimeBaglantiDizesi(adminDizesi))
+        {
+            Database = sentinel,
+        }.ConnectionString;
+
+        var sonuc = await AuditCompositionRoot.SentetikIzinKarariYazAsync(
+            hataliMasterDizesi,
+            postgreSql.AuditRuntimeBaglantiDizesi(adminDizesi));
+
+        Assert.Equal(DenetimYazmaSonucu.BelirsizGuvenliHata, sonuc);
+        Assert.Equal(string.Empty, await TumAuditMetniniOkuAsync(adminDizesi));
     }
 
     [Fact]
@@ -237,6 +297,127 @@ public sealed class DenetimYaziciTests(PostgreSqlKonteyneri postgreSql)
     }
 
     [Fact]
+    public async Task GercekPostgresCommitiKilitteAsili_ButceIcindeBelirsizDonerGecCommitBirakmaz()
+    {
+        var butce = TimeSpan.FromSeconds(1);
+        var tolerans = TimeSpan.FromMilliseconds(750);
+        var (adminDizesi, yazici) = await YaziciHazirlaAsync(new DenetimYaziciTestKancalari
+        {
+            TestButcesi = butce,
+        });
+        var karar = IzinKarariOlustur();
+        await using var kilitBaglantisi = new NpgsqlConnection(adminDizesi);
+        await kilitBaglantisi.OpenAsync();
+        // COMMIT, ertelenmis constraint trigger'inda bu oturumun tuttugu kilidi bekler: asili commit sunucudadir.
+        await using (var kilitKomutu = new NpgsqlCommand(
+            """
+            CREATE FUNCTION public.commit_kilidini_bekle() RETURNS trigger LANGUAGE plpgsql AS
+                $$ BEGIN PERFORM pg_advisory_xact_lock(246); RETURN NULL; END $$;
+            CREATE CONSTRAINT TRIGGER commit_kilidi AFTER INSERT ON master.denetim_kaydi
+                DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION public.commit_kilidini_bekle();
+            SELECT pg_advisory_lock(246);
+            """,
+            kilitBaglantisi))
+        {
+            await kilitKomutu.ExecuteNonQueryAsync();
+        }
+
+        var kronometre = Stopwatch.StartNew();
+        var sonuc = await yazici.YazAsync(karar);
+        var gecen = kronometre.Elapsed;
+
+        Assert.Equal(DenetimYazmaSonucu.BelirsizGuvenliHata, sonuc);
+        Assert.True(gecen < butce + tolerans, $"Gecen sure butceyi asti: {gecen.TotalMilliseconds} ms");
+        Assert.Equal(0, await AuditRuntimeOturumSayisiniBekleAsync(adminDizesi));
+        await using (var kilitAcmaKomutu = new NpgsqlCommand("SELECT pg_advisory_unlock(246)", kilitBaglantisi))
+        {
+            await kilitAcmaKomutu.ExecuteScalarAsync();
+        }
+
+        Assert.Equal(0, await KayitSayisiAsync(adminDizesi, karar.KararKimligi.TestDegeri));
+    }
+
+    [Fact]
+    public async Task UzlastirmaOkuyucusuKapanirkenSunucuAkisiSurse_CallerButceIcindeBelirsizDoner()
+    {
+        var butce = TimeSpan.FromSeconds(1);
+        var tolerans = TimeSpan.FromMilliseconds(750);
+        var (adminDizesi, _) = await YaziciHazirlaAsync();
+        var karar = IzinKarariOlustur();
+        var ikinciSatirId = Guid.CreateVersion7();
+        await using var kilitBaglantisi = new NpgsqlConnection(adminDizesi);
+        await kilitBaglantisi.OpenAsync();
+        // Uzlastirma SELECT'i ilk satiri gonderir; ikinci satirin policy'si kilit acilana dek NOTICE akitir.
+        // Her NOTICE okuma timeout'unu yeniler: okuyucu dispose'u deadline yonetmezse caller sinirsiz bekler.
+        // Ayni karar_id'li ikinci satir icin unique index yalniz bu efemer veritabaninda kaldirilir.
+        await using (var kilitKomutu = new NpgsqlCommand(
+            $"""
+            DROP INDEX master.ux_denetim_kaydi_karar_id;
+            CREATE FUNCTION public.uzlastirma_akisini_surdur(satir uuid) RETURNS boolean LANGUAGE plpgsql AS $$
+            BEGIN
+                IF satir = '{ikinciSatirId}' THEN
+                    LOOP
+                        RAISE NOTICE 'uzlastirma-akisi-suruyor';
+                        EXIT WHEN pg_try_advisory_xact_lock(247);
+                        PERFORM pg_sleep(0.2);
+                    END LOOP;
+                END IF;
+                RETURN true;
+            END $$;
+            ALTER TABLE master.denetim_kaydi ENABLE ROW LEVEL SECURITY;
+            CREATE POLICY ekleme ON master.denetim_kaydi FOR INSERT TO audit_runtime WITH CHECK (true);
+            CREATE POLICY okuma ON master.denetim_kaydi FOR SELECT TO audit_runtime
+                USING (public.uzlastirma_akisini_surdur(id));
+            SELECT pg_advisory_lock(247);
+            """,
+            kilitBaglantisi))
+        {
+            await kilitKomutu.ExecuteNonQueryAsync();
+        }
+
+        var yazici = new DenetimYazici(
+            postgreSql.AuditRuntimeBaglantiDizesi(adminDizesi),
+            new DenetimYaziciTestKancalari
+            {
+                TestButcesi = butce,
+                // Gercek commit sonrasi ack kaybi; ikinci satir fiziksel olarak commit edilen satirdan sonra eklenir.
+                CommitSonrasi = async _ =>
+                {
+                    await using var baglanti = new NpgsqlConnection(adminDizesi);
+                    await baglanti.OpenAsync(CancellationToken.None);
+                    await using var komut = new NpgsqlCommand(
+                        "INSERT INTO master.denetim_kaydi " +
+                        "(id, karar_id, servis_kimligi, tenant_id, correlation_id, islem, sonuc) " +
+                        "SELECT $1, karar_id, servis_kimligi, tenant_id, correlation_id, islem, sonuc " +
+                        "FROM master.denetim_kaydi WHERE karar_id = $2",
+                        baglanti);
+                    komut.Parameters.AddWithValue(ikinciSatirId);
+                    komut.Parameters.AddWithValue(karar.KararKimligi.TestDegeri);
+                    await komut.ExecuteNonQueryAsync(CancellationToken.None);
+                    throw new IOException("sentetik-ack-kaybi");
+                },
+            });
+        var kronometre = Stopwatch.StartNew();
+
+        DenetimYazmaSonucu sonuc;
+        TimeSpan gecen;
+        try
+        {
+            sonuc = await yazici.YazAsync(karar).WaitAsync(butce + tolerans);
+            gecen = kronometre.Elapsed;
+        }
+        finally
+        {
+            await using var kilitAcmaKomutu = new NpgsqlCommand("SELECT pg_advisory_unlock(247)", kilitBaglantisi);
+            await kilitAcmaKomutu.ExecuteScalarAsync();
+        }
+
+        Assert.Equal(DenetimYazmaSonucu.BelirsizGuvenliHata, sonuc);
+        Assert.True(gecen < butce + tolerans, $"Gecen sure butceyi asti: {gecen.TotalMilliseconds} ms");
+        Assert.Equal(0, await AuditRuntimeOturumSayisiniBekleAsync(adminDizesi));
+    }
+
+    [Fact]
     public async Task DeadlineYakinindaCommitAckKaybi_SatirOlsaBileKaliciDonmez()
     {
         var (adminDizesi, yazici) = await YaziciHazirlaAsync(new DenetimYaziciTestKancalari
@@ -257,7 +438,7 @@ public sealed class DenetimYaziciTests(PostgreSqlKonteyneri postgreSql)
     {
         var butce = TimeSpan.FromMilliseconds(300);
         var tolerans = TimeSpan.FromMilliseconds(500);
-        var ilkAdimiSerbestBirak = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var rollbackAdiminiSerbestBirak = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var zincirBitti = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var kilit = new object();
         var adimlar = new List<DenetimTemizlikAdimi>();
@@ -278,7 +459,7 @@ public sealed class DenetimYaziciTests(PostgreSqlKonteyneri postgreSql)
 
                 if (adim == DenetimTemizlikAdimi.Rollback)
                 {
-                    await ilkAdimiSerbestBirak.Task;
+                    await rollbackAdiminiSerbestBirak.Task;
                 }
             },
             TemizlikAdimiBitti = adim =>
@@ -305,13 +486,13 @@ public sealed class DenetimYaziciTests(PostgreSqlKonteyneri postgreSql)
             gecen = kronometre.Elapsed;
             lock (kilit)
             {
-                // Ilk adim beklerken ayni baglantida ikinci cleanup operasyonu baslamamali.
-                Assert.Equal([DenetimTemizlikAdimi.Rollback], adimlar);
+                // Rollback beklerken ayni baglantida sonraki cleanup operasyonu baslamamali.
+                Assert.Equal([DenetimTemizlikAdimi.KomutDispose, DenetimTemizlikAdimi.Rollback], adimlar);
             }
         }
         finally
         {
-            ilkAdimiSerbestBirak.TrySetResult();
+            rollbackAdiminiSerbestBirak.TrySetResult();
         }
 
         Assert.Equal(DenetimYazmaSonucu.BelirsizGuvenliHata, sonuc);
@@ -321,7 +502,9 @@ public sealed class DenetimYaziciTests(PostgreSqlKonteyneri postgreSql)
         lock (kilit)
         {
             // Iptal edilen rollback sonrasi transaction dispose atlanir; tek connection dispose ile biter.
-            Assert.Equal([DenetimTemizlikAdimi.Rollback, DenetimTemizlikAdimi.BaglantiDispose], adimlar);
+            Assert.Equal(
+                [DenetimTemizlikAdimi.KomutDispose, DenetimTemizlikAdimi.Rollback, DenetimTemizlikAdimi.BaglantiDispose],
+                adimlar);
             Assert.Equal(1, enFazlaEszamanliAdim);
             Assert.Equal(0, aktifAdim);
         }
@@ -369,6 +552,76 @@ public sealed class DenetimYaziciTests(PostgreSqlKonteyneri postgreSql)
                 ? new DenetimYazici(runtimeDizesi)
                 : new DenetimYazici(runtimeDizesi, testKancalari));
     }
+
+    // Tek Master veritabani: Tenancy tenant satirlari ile Audit context/history/store ayni yerdedir.
+    private async Task<string> MasterHazirlaAsync(params Tenant[] tenantlar)
+    {
+        var adminDizesi = await postgreSql.BosVeritabaniOlusturAsync();
+        await using (var tenancyBaglami = PostgreSqlKonteyneri.BaglamOlustur(adminDizesi))
+        {
+            await tenancyBaglami.Database.MigrateAsync();
+            tenancyBaglami.AddRange(tenantlar);
+            await tenancyBaglami.SaveChangesAsync();
+        }
+
+        await using (var auditBaglami = PostgreSqlKonteyneri.DenetimBaglamiOlustur(adminDizesi))
+        {
+            await auditBaglami.Database.MigrateAsync();
+        }
+
+        await PostgreSqlKonteyneri.AuditYetkileriniUygulaAsync(adminDizesi);
+        await PostgreSqlKonteyneri.TenancyOkumaYetkisiniUygulaAsync(adminDizesi);
+        return adminDizesi;
+    }
+
+    private static async Task<Guid[]> TenantKimlikleriniSiraliOkuAsync(string dize)
+    {
+        await using var baglanti = new NpgsqlConnection(dize);
+        await baglanti.OpenAsync();
+        await using var komut = new NpgsqlCommand("SELECT id FROM master.tenant ORDER BY id", baglanti);
+        await using var okuyucu = await komut.ExecuteReaderAsync();
+        var kimlikler = new List<Guid>();
+        while (await okuyucu.ReadAsync())
+        {
+            kimlikler.Add(okuyucu.GetGuid(0));
+        }
+
+        return [.. kimlikler];
+    }
+
+    private static async Task<AuditSatiri[]> AuditSatirlariniOkuAsync(string dize)
+    {
+        await using var baglanti = new NpgsqlConnection(dize);
+        await baglanti.OpenAsync();
+        await using var komut = new NpgsqlCommand(
+            "SELECT karar_id, servis_kimligi, tenant_id, correlation_id, islem, sonuc, gerekce_kodu " +
+            "FROM master.denetim_kaydi",
+            baglanti);
+        await using var okuyucu = await komut.ExecuteReaderAsync();
+        var satirlar = new List<AuditSatiri>();
+        while (await okuyucu.ReadAsync())
+        {
+            satirlar.Add(new AuditSatiri(
+                okuyucu.GetGuid(0),
+                okuyucu.GetString(1),
+                okuyucu.GetGuid(2),
+                okuyucu.GetGuid(3),
+                okuyucu.GetString(4),
+                okuyucu.GetString(5),
+                okuyucu.IsDBNull(6) ? null : okuyucu.GetString(6)));
+        }
+
+        return [.. satirlar];
+    }
+
+    private sealed record AuditSatiri(
+        Guid KararId,
+        string ServisKimligi,
+        Guid TenantId,
+        Guid CorrelationId,
+        string Islem,
+        string Sonuc,
+        string? GerekceKodu);
 
     private static DenetimKarari IzinKarariOlustur() =>
         DenetimKarariFabrikasi.IzinKarariOlustur(
