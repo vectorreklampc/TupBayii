@@ -63,7 +63,10 @@ internal static partial class DepoMimariTarayicisi
                 .Where(oge => oge.Name.LocalName == "ProjectReference")
                 .Select(oge => oge.Attribute("Include")?.Value)
                 .Where(deger => !string.IsNullOrWhiteSpace(deger))
-                .Select(deger => Path.GetFullPath(Path.Combine(projeDizini, deger!)))
+                .Select(deger => deger!
+                    .Replace('\\', Path.DirectorySeparatorChar)
+                    .Replace('/', Path.DirectorySeparatorChar))
+                .Select(deger => Path.GetFullPath(Path.Combine(projeDizini, deger)))
                 .Select(yol => dosyayaGoreProjeAdi.TryGetValue(yol, out var ad)
                     ? ad
                     : Path.GetFileNameWithoutExtension(yol)
