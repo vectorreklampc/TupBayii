@@ -1,4 +1,4 @@
-using System.Data;
+using System.Diagnostics;
 using System.Transactions;
 using Npgsql;
 using NpgsqlTypes;
@@ -13,16 +13,39 @@ public enum DenetimYazmaSonucu
     BelirsizGuvenliHata,
 }
 
+internal sealed class DenetimYaziciTestKancalari
+{
+    internal TimeSpan? TestButcesi { get; init; }
+
+    internal Func<CancellationToken, Task>? CommitBasladi { get; init; }
+
+    internal Func<CancellationToken, Task>? CommitSonrasi { get; init; }
+
+    internal Func<CancellationToken, Task>? ReconciliationBasladi { get; init; }
+}
+
 internal sealed class DenetimYazici
 {
+    private static readonly TimeSpan VarsayilanButce = TimeSpan.FromSeconds(12);
     private readonly string _baglantiDizesi;
+    private readonly TimeSpan _butce;
+    private readonly DenetimYaziciTestKancalari? _testKancalari;
 
     internal DenetimYazici(string baglantiDizesi)
+        : this(baglantiDizesi, null)
+    {
+    }
+
+    internal DenetimYazici(
+        string baglantiDizesi,
+        DenetimYaziciTestKancalari? testKancalari)
     {
         var olusturucu = new NpgsqlConnectionStringBuilder(baglantiDizesi)
         {
             Enlist = false,
             IncludeErrorDetail = false,
+            Timeout = Math.Min(5, new NpgsqlConnectionStringBuilder(baglantiDizesi).Timeout),
+            CommandTimeout = Math.Min(5, new NpgsqlConnectionStringBuilder(baglantiDizesi).CommandTimeout),
         };
         if (!string.Equals(olusturucu.Username, "audit_runtime", StringComparison.Ordinal))
         {
@@ -30,6 +53,12 @@ internal sealed class DenetimYazici
         }
 
         _baglantiDizesi = olusturucu.ConnectionString;
+        _testKancalari = testKancalari;
+        _butce = testKancalari?.TestButcesi ?? VarsayilanButce;
+        if (_butce <= TimeSpan.Zero || _butce > VarsayilanButce)
+        {
+            throw new ArgumentOutOfRangeException(nameof(testKancalari));
+        }
     }
 
     internal async Task<DenetimYazmaSonucu> YazAsync(
@@ -37,56 +66,100 @@ internal sealed class DenetimYazici
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(karar);
+        using var deadline = new MonotonicDeadline(_butce, cancellationToken);
         using var ortamBastirma = new TransactionScope(
             TransactionScopeOption.Suppress,
             TransactionScopeAsyncFlowOption.Enabled);
 
+        NpgsqlConnection? baglanti = null;
+        NpgsqlTransaction? transaction = null;
+        var commitTamamlandi = false;
+        var uzlastirilmali = false;
+        var sonuc = DenetimYazmaSonucu.BelirsizGuvenliHata;
         try
         {
-            await using var baglanti = new NpgsqlConnection(_baglantiDizesi);
-            await baglanti.OpenAsync(cancellationToken);
-            await using var transaction = await baglanti.BeginTransactionAsync(
+            baglanti = new NpgsqlConnection(_baglantiDizesi);
+            await baglanti.OpenAsync(deadline.Token);
+            transaction = await baglanti.BeginTransactionAsync(
                 System.Data.IsolationLevel.ReadCommitted,
-                cancellationToken);
-            try
+                deadline.Token);
+            await KaydiEkleAsync(baglanti, transaction, karar, deadline);
+
+            // Bu noktadan sonraki her kesinti ambiguous'tur.
+            uzlastirilmali = true;
+            if (_testKancalari?.CommitBasladi is not null)
             {
-                await KaydiEkleAsync(baglanti, transaction, karar, cancellationToken);
-                await transaction.CommitAsync(cancellationToken);
-                return DenetimYazmaSonucu.Kalici;
+                await _testKancalari.CommitBasladi(deadline.Token);
             }
-            catch (PostgresException hata) when (hata.SqlState == PostgresErrorCodes.UniqueViolation)
+
+            await transaction.CommitAsync(deadline.Token);
+            commitTamamlandi = true;
+            if (_testKancalari?.CommitSonrasi is not null)
             {
-                await GuvenliRollbackAsync(transaction, cancellationToken);
-                return await UzlastirAsync(karar, cancellationToken);
+                await _testKancalari.CommitSonrasi(deadline.Token);
             }
-            catch (Exception) when (!cancellationToken.IsCancellationRequested)
-            {
-                await GuvenliRollbackAsync(transaction, cancellationToken);
-                return await UzlastirAsync(karar, cancellationToken);
-            }
+
+            sonuc = DenetimYazmaSonucu.Kalici;
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        catch (PostgresException hata) when (hata.SqlState == PostgresErrorCodes.UniqueViolation)
         {
-            throw;
+            uzlastirilmali = true;
         }
         catch
         {
+            // Hata ayrintisi yukariya veya telemetry'ye tasinmaz; sonuc fail-closed kalir.
+        }
+        finally
+        {
+            if (transaction is not null && !commitTamamlandi)
+            {
+                await FazHatasiniYutAsync(() => transaction.RollbackAsync(deadline.Token));
+            }
+
+            if (transaction is not null)
+            {
+                await FazHatasiniYutAsync(
+                    () => transaction.DisposeAsync().AsTask().WaitAsync(deadline.Token));
+            }
+
+            if (baglanti is not null)
+            {
+                await FazHatasiniYutAsync(() => baglanti.CloseAsync().WaitAsync(deadline.Token));
+                await FazHatasiniYutAsync(
+                    () => baglanti.DisposeAsync().AsTask().WaitAsync(deadline.Token));
+            }
+        }
+
+        if (sonuc == DenetimYazmaSonucu.Kalici)
+        {
+            return deadline.Aktif
+                ? DenetimYazmaSonucu.Kalici
+                : DenetimYazmaSonucu.BelirsizGuvenliHata;
+        }
+
+        if (!uzlastirilmali || !deadline.Aktif)
+        {
             return DenetimYazmaSonucu.BelirsizGuvenliHata;
         }
+
+        return await UzlastirAsync(karar, deadline);
     }
 
     private static async Task KaydiEkleAsync(
         NpgsqlConnection baglanti,
         NpgsqlTransaction transaction,
         DenetimKarari karar,
-        CancellationToken cancellationToken)
+        MonotonicDeadline deadline)
     {
         const string sql = """
             INSERT INTO master.denetim_kaydi
                 (id, karar_id, tenant_id, correlation_id, islem, sonuc, gerekce_kodu)
             VALUES ($1, $2, $3, $4, $5, $6, $7)
             """;
-        await using var komut = new NpgsqlCommand(sql, baglanti, transaction);
+        await using var komut = new NpgsqlCommand(sql, baglanti, transaction)
+        {
+            CommandTimeout = deadline.KomutZamanAsimiSaniyesi,
+        };
         komut.Parameters.AddWithValue(Guid.CreateVersion7());
         komut.Parameters.AddWithValue(karar.KararKimligi.Deger);
         komut.Parameters.AddWithValue(karar.TenantBaglami.TenantId);
@@ -98,56 +171,103 @@ internal sealed class DenetimYazici
             NpgsqlDbType = NpgsqlDbType.Varchar,
             Value = karar.GerekceKodu is null ? DBNull.Value : karar.GerekceKodu,
         });
-        await komut.ExecuteNonQueryAsync(cancellationToken);
+        await komut.ExecuteNonQueryAsync(deadline.Token);
     }
 
     private async Task<DenetimYazmaSonucu> UzlastirAsync(
         DenetimKarari karar,
-        CancellationToken cancellationToken)
+        MonotonicDeadline deadline)
     {
+        NpgsqlConnection? baglanti = null;
+        DenetimYazmaSonucu sonuc = DenetimYazmaSonucu.BelirsizGuvenliHata;
         try
         {
-            await using var baglanti = new NpgsqlConnection(_baglantiDizesi);
-            await baglanti.OpenAsync(cancellationToken);
+            if (_testKancalari?.ReconciliationBasladi is not null)
+            {
+                await _testKancalari.ReconciliationBasladi(deadline.Token);
+            }
+
+            baglanti = new NpgsqlConnection(_baglantiDizesi);
+            await baglanti.OpenAsync(deadline.Token);
             const string sql = """
                 SELECT servis_kimligi, tenant_id, correlation_id, islem, sonuc, gerekce_kodu
                 FROM master.denetim_kaydi
                 WHERE karar_id = $1
                 """;
-            await using var komut = new NpgsqlCommand(sql, baglanti);
-            komut.Parameters.AddWithValue(karar.KararKimligi.Deger);
-            await using var okuyucu = await komut.ExecuteReaderAsync(cancellationToken);
-            if (!await okuyucu.ReadAsync(cancellationToken))
+            await using var komut = new NpgsqlCommand(sql, baglanti)
             {
-                return DenetimYazmaSonucu.BelirsizGuvenliHata;
+                CommandTimeout = deadline.KomutZamanAsimiSaniyesi,
+            };
+            komut.Parameters.AddWithValue(karar.KararKimligi.Deger);
+            await using var okuyucu = await komut.ExecuteReaderAsync(deadline.Token);
+            if (await okuyucu.ReadAsync(deadline.Token))
+            {
+                var ayni =
+                    okuyucu.GetString(0) == "audit_runtime" &&
+                    okuyucu.GetGuid(1) == karar.TenantBaglami.TenantId &&
+                    okuyucu.GetGuid(2) == karar.CorrelationKimligi.Deger &&
+                    okuyucu.GetString(3) == karar.Islem &&
+                    okuyucu.GetString(4) == karar.Sonuc &&
+                    (okuyucu.IsDBNull(5) ? null : okuyucu.GetString(5)) == karar.GerekceKodu;
+                sonuc = ayni ? DenetimYazmaSonucu.Tekrar : DenetimYazmaSonucu.Catisma;
             }
-
-            var ayni =
-                okuyucu.GetString(0) == "audit_runtime" &&
-                okuyucu.GetGuid(1) == karar.TenantBaglami.TenantId &&
-                okuyucu.GetGuid(2) == karar.CorrelationKimligi.Deger &&
-                okuyucu.GetString(3) == karar.Islem &&
-                okuyucu.GetString(4) == karar.Sonuc &&
-                (okuyucu.IsDBNull(5) ? null : okuyucu.GetString(5)) == karar.GerekceKodu;
-            return ayni ? DenetimYazmaSonucu.Tekrar : DenetimYazmaSonucu.Catisma;
         }
         catch
         {
-            return DenetimYazmaSonucu.BelirsizGuvenliHata;
+            sonuc = DenetimYazmaSonucu.BelirsizGuvenliHata;
         }
+        finally
+        {
+            if (baglanti is not null)
+            {
+                await FazHatasiniYutAsync(() => baglanti.CloseAsync().WaitAsync(deadline.Token));
+                await FazHatasiniYutAsync(
+                    () => baglanti.DisposeAsync().AsTask().WaitAsync(deadline.Token));
+            }
+        }
+
+        return deadline.Aktif ? sonuc : DenetimYazmaSonucu.BelirsizGuvenliHata;
     }
 
-    private static async Task GuvenliRollbackAsync(
-        NpgsqlTransaction transaction,
-        CancellationToken cancellationToken)
+    private static async Task FazHatasiniYutAsync(Func<Task> faz)
     {
         try
         {
-            await transaction.RollbackAsync(cancellationToken);
+            await faz();
         }
         catch
         {
-            // Reconciliation gercek sonucu belirler; rollback hatasi basariya cevrilmez.
+            // Cleanup basariya cevrilmez; asil sonuc fail-closed kalir.
         }
+    }
+
+    private sealed class MonotonicDeadline : IDisposable
+    {
+        private readonly TimeSpan _butce;
+        private readonly long _baslangic = Stopwatch.GetTimestamp();
+        private readonly CancellationTokenSource _deadline;
+
+        internal MonotonicDeadline(TimeSpan butce, CancellationToken disToken)
+        {
+            _butce = butce;
+            _deadline = CancellationTokenSource.CreateLinkedTokenSource(disToken);
+            _deadline.CancelAfter(butce);
+        }
+
+        internal CancellationToken Token => _deadline.Token;
+
+        internal bool Aktif =>
+            !_deadline.IsCancellationRequested && Stopwatch.GetElapsedTime(_baslangic) < _butce;
+
+        internal int KomutZamanAsimiSaniyesi
+        {
+            get
+            {
+                var kalan = _butce - Stopwatch.GetElapsedTime(_baslangic);
+                return Math.Max(1, Math.Min(5, (int)Math.Ceiling(kalan.TotalSeconds)));
+            }
+        }
+
+        public void Dispose() => _deadline.Dispose();
     }
 }

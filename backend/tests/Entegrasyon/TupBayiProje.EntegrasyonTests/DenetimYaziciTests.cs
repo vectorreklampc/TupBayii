@@ -1,4 +1,5 @@
 using System.Transactions;
+using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using TupBayiProje.Moduller.Audit.Altyapi;
@@ -61,13 +62,99 @@ public sealed class DenetimYaziciTests(PostgreSqlKonteyneri postgreSql)
         Assert.Equal(1, await KayitSayisiAsync(adminDizesi, karar.KararKimligi.TestDegeri));
     }
 
-    private async Task<(string AdminDizesi, DenetimYazici Yazici)> YaziciHazirlaAsync()
+    [Fact]
+    public async Task GercekCommitSonrasiAckKaybi_ReconciliationIleTekrarDoner()
+    {
+        var (adminDizesi, yazici) = await YaziciHazirlaAsync(new DenetimYaziciTestKancalari
+        {
+            CommitSonrasi = _ => throw new IOException("sentetik-ack-kaybi"),
+        });
+        var karar = IzinKarariOlustur();
+
+        var sonuc = await yazici.YazAsync(karar);
+
+        Assert.Equal(DenetimYazmaSonucu.Tekrar, sonuc);
+        Assert.Equal(1, await KayitSayisiAsync(adminDizesi, karar.KararKimligi.TestDegeri));
+    }
+
+    [Fact]
+    public async Task CommitOncesiAckKaybiVeReconciliationHatasi_GuvenliBelirsizDoner()
+    {
+        var (adminDizesi, yazici) = await YaziciHazirlaAsync(new DenetimYaziciTestKancalari
+        {
+            CommitBasladi = _ => throw new IOException("sentetik-commit-oncesi-kayip"),
+            ReconciliationBasladi = _ => throw new IOException("sentetik-reconciliation-hatasi"),
+        });
+        var karar = IzinKarariOlustur();
+
+        var sonuc = await yazici.YazAsync(karar);
+
+        Assert.Equal(DenetimYazmaSonucu.BelirsizGuvenliHata, sonuc);
+        Assert.Equal(0, await KayitSayisiAsync(adminDizesi, karar.KararKimligi.TestDegeri));
+    }
+
+    [Fact]
+    public async Task CommitOncesiAckKaybi_ReconciliationSatirBulamazsaGuvenliBelirsizDoner()
+    {
+        var (adminDizesi, yazici) = await YaziciHazirlaAsync(new DenetimYaziciTestKancalari
+        {
+            CommitBasladi = _ => throw new IOException("sentetik-commit-oncesi-kayip"),
+        });
+        var karar = IzinKarariOlustur();
+
+        var sonuc = await yazici.YazAsync(karar);
+
+        Assert.Equal(DenetimYazmaSonucu.BelirsizGuvenliHata, sonuc);
+        Assert.Equal(0, await KayitSayisiAsync(adminDizesi, karar.KararKimligi.TestDegeri));
+    }
+
+    [Fact]
+    public async Task HangingCommit_TekMonotonicDeadlineSonundaKaliciDonmez()
+    {
+        var (adminDizesi, yazici) = await YaziciHazirlaAsync(new DenetimYaziciTestKancalari
+        {
+            TestButcesi = TimeSpan.FromMilliseconds(150),
+            CommitBasladi = cancellationToken => Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken),
+        });
+        var karar = IzinKarariOlustur();
+        var kronometre = Stopwatch.StartNew();
+
+        var sonuc = await yazici.YazAsync(karar);
+
+        Assert.Equal(DenetimYazmaSonucu.BelirsizGuvenliHata, sonuc);
+        Assert.True(kronometre.Elapsed < TimeSpan.FromSeconds(2));
+        Assert.Equal(0, await KayitSayisiAsync(adminDizesi, karar.KararKimligi.TestDegeri));
+    }
+
+    [Fact]
+    public async Task DeadlineYakinindaCommitAckKaybi_SatirOlsaBileKaliciDonmez()
+    {
+        var (adminDizesi, yazici) = await YaziciHazirlaAsync(new DenetimYaziciTestKancalari
+        {
+            TestButcesi = TimeSpan.FromMilliseconds(150),
+            CommitSonrasi = cancellationToken => Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken),
+        });
+        var karar = IzinKarariOlustur();
+
+        var sonuc = await yazici.YazAsync(karar);
+
+        Assert.Equal(DenetimYazmaSonucu.BelirsizGuvenliHata, sonuc);
+        Assert.Equal(1, await KayitSayisiAsync(adminDizesi, karar.KararKimligi.TestDegeri));
+    }
+
+    private async Task<(string AdminDizesi, DenetimYazici Yazici)> YaziciHazirlaAsync(
+        DenetimYaziciTestKancalari? testKancalari = null)
     {
         var adminDizesi = await postgreSql.BosVeritabaniOlusturAsync();
         await using var baglam = PostgreSqlKonteyneri.DenetimBaglamiOlustur(adminDizesi);
         await baglam.Database.MigrateAsync();
         await PostgreSqlKonteyneri.AuditYetkileriniUygulaAsync(adminDizesi);
-        return (adminDizesi, new DenetimYazici(postgreSql.AuditRuntimeBaglantiDizesi(adminDizesi)));
+        var runtimeDizesi = postgreSql.AuditRuntimeBaglantiDizesi(adminDizesi);
+        return (
+            adminDizesi,
+            testKancalari is null
+                ? new DenetimYazici(runtimeDizesi)
+                : new DenetimYazici(runtimeDizesi, testKancalari));
     }
 
     private static DenetimKarari IzinKarariOlustur() =>
