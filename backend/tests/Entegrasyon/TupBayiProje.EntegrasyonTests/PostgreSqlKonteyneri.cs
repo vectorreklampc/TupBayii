@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Npgsql;
 using Testcontainers.PostgreSql;
+using TupBayiProje.Moduller.Audit.Altyapi;
 using TupBayiProje.Moduller.Tenancy.Altyapi;
 using Xunit;
 
@@ -41,6 +42,14 @@ public sealed class PostgreSqlKonteyneri : IAsyncLifetime
 
     public static MasterVeritabaniBaglami BaglamOlustur(string baglantiDizesi, params IInterceptor[] yakalayicilar) =>
         new(new DbContextOptionsBuilder<MasterVeritabaniBaglami>()
+            .UseNpgsql(baglantiDizesi)
+            .AddInterceptors(yakalayicilar)
+            .Options);
+
+    public static DenetimVeritabaniBaglami DenetimBaglamiOlustur(
+        string baglantiDizesi,
+        params IInterceptor[] yakalayicilar) =>
+        new(new DbContextOptionsBuilder<DenetimVeritabaniBaglami>()
             .UseNpgsql(baglantiDizesi)
             .AddInterceptors(yakalayicilar)
             .Options);
