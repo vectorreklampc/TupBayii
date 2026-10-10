@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, test } from "node:test";
 
 import {
@@ -17,7 +18,7 @@ const oracle = Object.freeze({
 function kriter({
   kimlik = "AC-TBP-237-01",
   riskSeviyesi = "YUKSEK",
-  kaynakKimlikleri = ["REQ-TBP-237-01", "INV-TBP-237-01", "GS-TBP-237-01"],
+  kaynakKimlikleri = ["REQ-TBP-237-01", "BR-TBP-237-01", "GS-TBP-237-01"],
   testler = [
     { kimlik: "TEST-TBP-237-UNIT-01", tur: "UNIT" },
     { kimlik: "TEST-TBP-237-CONTRACT-01", tur: "CONTRACT_OPENAPI" },
@@ -81,8 +82,8 @@ describe("Kabul testi catisi", () => {
     ]);
     assert.deepEqual(plan.izlenebilirlik, [
       { kaynakKimligi: "AC-TBP-237-01", testKimlikleri: ["TEST-TBP-237-CONTRACT-01", "TEST-TBP-237-UNIT-01"] },
+      { kaynakKimligi: "BR-TBP-237-01", testKimlikleri: ["TEST-TBP-237-CONTRACT-01", "TEST-TBP-237-UNIT-01"] },
       { kaynakKimligi: "GS-TBP-237-01", testKimlikleri: ["TEST-TBP-237-CONTRACT-01", "TEST-TBP-237-UNIT-01"] },
-      { kaynakKimligi: "INV-TBP-237-01", testKimlikleri: ["TEST-TBP-237-CONTRACT-01", "TEST-TBP-237-UNIT-01"] },
       { kaynakKimligi: "REQ-TBP-237-01", testKimlikleri: ["TEST-TBP-237-CONTRACT-01", "TEST-TBP-237-UNIT-01"] },
     ]);
   });
@@ -269,5 +270,135 @@ describe("Kabul testi kalite kapisi", () => {
       }).nedenKodlari,
       ["TEST_PLANI_GECERSIZ"],
     );
+  });
+});
+
+describe("Kabul kalite kapisi invariant entegrasyonu", () => {
+  function isKalemi(ad = "is-kalemi-gecerli.json") {
+    return JSON.parse(readFileSync(new URL(`./fixtures/${ad}`, import.meta.url), "utf8"));
+  }
+
+  function degerlendir(girdi) {
+    const plan = kabulTestPlaniOlustur({
+      testOracle: girdi.testOracle,
+      kabulKriterleri: girdi.kabulKriterleri,
+    });
+    assert.equal(plan.sonuc, "HAZIR");
+    return kaliteKapisiniDegerlendir({
+      plan,
+      testSonuclari: girdi.testSonuclari,
+      isKimligi: girdi.isKimligi,
+      calistirmaKimligi: girdi.calistirmaKimligi,
+      invariantKanitlari: girdi.invariantKanitlari,
+    });
+  }
+
+  function bulgular(sonuc) {
+    return sonuc.bulgular.map(({ kod, alan }) => [kod, alan]);
+  }
+
+  test("ilgili invariantlarin yurutulmus gozlem kaniti gecerliyse issue tamamlanabilir", () => {
+    const sonuc = degerlendir(isKalemi());
+
+    assert.equal(sonuc.sonuc, "ACCEPTED");
+    assert.equal(sonuc.tamamlanabilirMi, true);
+    assert.deepEqual(sonuc.kapsama.eksikKaynakKimlikleri, []);
+  });
+
+  test("ihlal gozlemi testler PASS olsa da her invariant icin ayri bulguyla tamamlamayi engeller", () => {
+    const sonuc = degerlendir(isKalemi("is-kalemi-ihlal.json"));
+
+    assert.equal(sonuc.tamamlanabilirMi, false);
+    assert.deepEqual(sonuc.nedenKodlari, ["INVARIANT_IHLALI"]);
+    assert.deepEqual(bulgular(sonuc), [
+      ["INVARIANT_IHLALI", "invariantKanitlari.INV-AUD-005"],
+      ["INVARIANT_IHLALI", "invariantKanitlari.INV-GOV-003"],
+    ]);
+  });
+
+  test("eksik, bozuk, eski, eslesmeyen veya kanitlanamayan ilgili kanit fail-closed engeller", () => {
+    const durumlar = [
+      ["INVARIANT_KANITI_EKSIK", (girdi) => { delete girdi.invariantKanitlari["INV-AUD-005"]; }],
+      ["INVARIANT_KANITI_EKSIK", (girdi) => { delete girdi.invariantKanitlari; }],
+      ["INVARIANT_KANITI_GECERSIZ", (girdi) => { girdi.invariantKanitlari["INV-AUD-005"].durum = "KANITLANDI"; }],
+      ["INVARIANT_KANITI_ESKI", (girdi) => { girdi.invariantKanitlari["INV-AUD-005"].calistirmaKimligi = "github-actions:1:1"; }],
+      ["INVARIANT_KANITI_ESKI", (girdi) => { girdi.invariantKanitlari["INV-AUD-005"].isKimligi = "TBP-232"; }],
+      ["INVARIANT_TEST_KIMLIGI_UYUSMUYOR", (girdi) => { girdi.invariantKanitlari["INV-AUD-005"].testKimligi = "TEST-INV-AUD-004"; }],
+      ["INVARIANT_KANITI_BILINMIYOR", (girdi) => { girdi.invariantKanitlari["INV-AUD-005"].gozlem = { istekler: [] }; }],
+      ["INVARIANT_HUMAN_GATE_EKSIK", (girdi) => { delete girdi.invariantKanitlari["INV-GOV-003"].humanGate; }],
+      ["INVARIANT_HUMAN_GATE_GECERSIZ", (girdi) => { girdi.invariantKanitlari["INV-GOV-003"].humanGate.onaylayan = "insan:codex"; }],
+      ["INVARIANT_KANITI_ILGISIZ", (girdi) => {
+        girdi.invariantKanitlari["INV-STK-001"] = { ...girdi.invariantKanitlari["INV-AUD-005"], testKimligi: "TEST-INV-STK-001" };
+      }],
+      ["INVARIANT_IS_KIMLIGI_GECERSIZ", (girdi) => { delete girdi.isKimligi; }],
+      ["INVARIANT_CALISTIRMA_KIMLIGI_GECERSIZ", (girdi) => { girdi.calistirmaKimligi = ""; }],
+    ];
+
+    for (const [kod, bozucu] of durumlar) {
+      const girdi = isKalemi();
+      bozucu(girdi);
+      const sonuc = degerlendir(girdi);
+      assert.equal(sonuc.sonuc, "BLOCKED", kod);
+      assert.equal(sonuc.tamamlanabilirMi, false, kod);
+      assert.deepEqual(sonuc.nedenKodlari, [kod], kod);
+    }
+  });
+
+  test("kayit defterinde olmayan INV kaynagi tamamlanamaz", () => {
+    const girdi = isKalemi();
+    girdi.kabulKriterleri[0].kaynakKimlikleri.push("INV-TBP-237-01");
+    girdi.kabulKriterleri[0].testler.push({ kimlik: "TEST-INV-TBP-237-01", tur: "UNIT" });
+    girdi.testSonuclari.push({ testKimligi: "TEST-INV-TBP-237-01", durum: "PASS" });
+
+    assert.deepEqual(bulgular(degerlendir(girdi)), [
+      ["INVARIANT_KAYDI_BULUNAMADI", "invariantKanitlari.INV-TBP-237-01"],
+    ]);
+  });
+
+  test("kayitli invariant testi planda yoksa, FAIL veya FLAKY ise tamamlanamaz", () => {
+    const plansiz = isKalemi();
+    plansiz.kabulKriterleri[0].testler = [{ kimlik: "TEST-TBP-233-SMOKE-01", tur: "SMOKE" }];
+    plansiz.testSonuclari = [{ testKimligi: "TEST-TBP-233-SMOKE-01", durum: "PASS" }];
+    assert.deepEqual(bulgular(degerlendir(plansiz)), [
+      ["INVARIANT_TESTI_PLANDA_YOK", "plan.izlenebilirlik.INV-AUD-005"],
+      ["INVARIANT_TESTI_PLANDA_YOK", "plan.izlenebilirlik.INV-GOV-003"],
+    ]);
+
+    const basarisiz = isKalemi();
+    basarisiz.testSonuclari[0].durum = "FAIL";
+    assert.deepEqual(degerlendir(basarisiz).nedenKodlari, ["TEST_BASARISIZ"]);
+
+    const karantina = isKalemi();
+    karantina.kabulKriterleri[0].riskSeviyesi = "ORTA";
+    karantina.testSonuclari[0] = {
+      testKimligi: "TEST-INV-AUD-005",
+      durum: "FLAKY",
+      karantina: { gerekce: "Zamanlama sapmasi", takipIsAnahtari: "TBP-999" },
+    };
+    assert.deepEqual(bulgular(degerlendir(karantina)), [
+      ["INVARIANT_TESTI_KARANTINA_YASAK", "testSonuclari.TEST-INV-AUD-005"],
+    ]);
+  });
+
+  test("ilgili invariant tasimayan is kalemi invariant kaniti istemez", () => {
+    const plan = planOlustur();
+
+    assert.equal(kaliteKapisiniDegerlendir({ plan, testSonuclari: basariliSonuclar(plan) }).sonuc, "ACCEPTED");
+  });
+
+  test("miras alinan is ve kanit alanlari kullanilmaz", () => {
+    const girdi = isKalemi();
+    const plan = kabulTestPlaniOlustur({ testOracle: girdi.testOracle, kabulKriterleri: girdi.kabulKriterleri });
+    const miras = Object.create({
+      isKimligi: girdi.isKimligi,
+      calistirmaKimligi: girdi.calistirmaKimligi,
+      invariantKanitlari: girdi.invariantKanitlari,
+    });
+    Object.assign(miras, { plan, testSonuclari: girdi.testSonuclari });
+
+    assert.deepEqual(kaliteKapisiniDegerlendir(miras).nedenKodlari, [
+      "INVARIANT_IS_KIMLIGI_GECERSIZ",
+      "INVARIANT_CALISTIRMA_KIMLIGI_GECERSIZ",
+    ]);
   });
 });
