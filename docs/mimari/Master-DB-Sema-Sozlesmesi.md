@@ -64,9 +64,17 @@ karıştırılmaz.
    (SOT §1.2, §5).
 6. Cross-DB yan etkiler outbox/inbox ve idempotency ile yürür.
 
-TBP-59'a bırakılanlar: ID biçimi, Master içi domainler arası FK constraint kararı, kolon
-ayrıntıları, gerçek Master entity tipleri ve bunların namespace/assembly
-yerleşimi ve owned değer nesnelerine ilişkin nihai karar.
+TBP-58'in TBP-59'a bıraktığı kararlar TBP-59'da şöyle verildi:
+
+- ID biçimi: kimlikler uygulamada domain fabrikalarıyla UUIDv7 üretilir; kolonlarda DB default'u,
+  identity veya generated ifade yoktur. PostgreSQL `uuid_extract_version(id) = 7` entegrasyon
+  testiyle doğrulanır.
+- FK: yalnız Tenancy içi `fk_tenant_veritabani_tenant` (`tenant_veritabani.tenant_id` →
+  `tenant.id`) `ON DELETE RESTRICT` ile tanımlıdır; cascade yoktur. Domainler arası FK eklenmez.
+- Owned değer nesneleri: Master modelinde owned tip yoktur; oracle her owned tipi FAIL etmeye
+  devam eder.
+- Kolon ayrıntıları ve entity tipleri: `TupBayiProje.Moduller.Tenancy.Domain` içindeki `Tenant` ve
+  `TenantVeritabani`; şema `MasterTenantIlkSema` migration'ı ile kurulur.
 
 ## 4. Doğrulama
 
@@ -93,7 +101,7 @@ yerleşimi ve owned değer nesnelerine ilişkin nihai karar.
      (`GetTableMappings()`) okur. Eşlemeler tam olarak tek bir `master.<whitelist tablosu>` olmalıdır;
      farklı schema, eksik tablo veya entity splitting ile eklenen ek tablo FAIL olur.
    - Owned tipler: owned değer nesnelerine genel izin verilmez. Oracle her owned tipi FAIL eder
-     ve kapalı-liste davranışı korunur. Owned değer nesneleri için nihai karar TBP-59'da verilir.
+     ve kapalı-liste davranışı korunur. TBP-59 kararı: Master modelinde owned tip yoktur (§3).
 4. Master EF modelinde tenant iş entity'si bulunamaz; bu şart 2. ve 3. maddedeki runtime model
    testiyle doğrulanır. Proje veya assembly bağımlılık kuralı TBP-58 kapsamında tanımlanmaz.
 5. Oracle ve whitelist verisi `backend/tests/Mimari/TupBayiProje.MimariTests/MasterVeritabaniBeyazListesi.cs`

@@ -126,6 +126,50 @@ public sealed class MasterVeritabaniEntegrasyonTests(PostgreSqlKonteyneri postgr
         await BeklenenSemayiDogrulaAsync(baglantiDizesi);
     }
 
+    // FK nedeniyle tenant_veritabani satiri tek basina olamaz; yalniz tenant satiri ayri vaka olarak denenir.
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task MigrationDown_MasterTablolarindaSatirVarken_HicbirSeyDusurmedenReddedilir(bool veritabaniKaydiVar)
+    {
+        var baglantiDizesi = await GocUygulanmisVeritabaniAsync();
+        var tenant = Tenant.Olustur();
+        var veritabani = TenantVeritabani.Olustur(tenant.Id);
+        await KaydetAsync(baglantiDizesi, veritabaniKaydiVar ? [tenant, veritabani] : [tenant]);
+
+        await using (var baglam = PostgreSqlKonteyneri.BaglamOlustur(baglantiDizesi))
+        {
+            // Npgsql execution strategy migration hatasini InvalidOperationException ile sarar.
+            var sarmalayici = await Assert.ThrowsAsync<InvalidOperationException>(
+                () => baglam.GetService<IMigrator>().MigrateAsync(Migration.InitialDatabase));
+            var hata = Assert.IsType<PostgresException>(sarmalayici.InnerException);
+
+            Assert.Equal(PostgresErrorCodes.ObjectNotInPrerequisiteState, hata.SqlState);
+            Assert.Equal("TBP-59: master tenant tablolari bos degil; MasterTenantIlkSema geri alinamaz.", hata.MessageText);
+            Assert.Equal(["20261008000000_MasterTenantIlkSema"], await baglam.Database.GetAppliedMigrationsAsync());
+        }
+
+        await BeklenenSemayiDogrulaAsync(baglantiDizesi);
+        Assert.Equal([tenant.Id.ToString()], await SatirlariOkuAsync(baglantiDizesi, "SELECT id::text FROM master.tenant"));
+        Assert.Equal(
+            veritabaniKaydiVar ? [$"{veritabani.Id}:{tenant.Id}"] : [],
+            await SatirlariOkuAsync(baglantiDizesi, "SELECT id::text || ':' || tenant_id::text FROM master.tenant_veritabani"));
+    }
+
+    [Fact]
+    public async Task Kimlikler_DomainFabrikalarindanDbContextIleKaydedilince_PostgreSqlde_UuidV7Olur()
+    {
+        var baglantiDizesi = await GocUygulanmisVeritabaniAsync();
+        var tenant = Tenant.Olustur();
+        await KaydetAsync(baglantiDizesi, tenant, TenantVeritabani.Olustur(tenant.Id));
+
+        // Surum PostgreSQL 18 uuid_extract_version ile DB'deki degerden okunur; .NET tarafi kanit sayilmaz.
+        Assert.Equal(["7"], await SatirlariOkuAsync(baglantiDizesi, "SELECT uuid_extract_version(id)::text FROM master.tenant"));
+        Assert.Equal(
+            ["7"],
+            await SatirlariOkuAsync(baglantiDizesi, "SELECT uuid_extract_version(id)::text FROM master.tenant_veritabani"));
+    }
+
     [Fact]
     public async Task TenantSilme_BagliTenantVeritabaniVarken_RestrictIleReddedilir()
     {
