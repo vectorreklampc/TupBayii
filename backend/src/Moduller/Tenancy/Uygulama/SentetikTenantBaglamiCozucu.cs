@@ -5,6 +5,8 @@ namespace TupBayiProje.Moduller.Tenancy.Uygulama;
 
 public static class SentetikTenantBaglamiCozucu
 {
+    public static DogrulanmisTenantBaglami YeniTenantIcinCoz() => Coz(Tenant.Olustur());
+
     public static DogrulanmisTenantBaglami Coz(Tenant tenant)
     {
         ArgumentNullException.ThrowIfNull(tenant);

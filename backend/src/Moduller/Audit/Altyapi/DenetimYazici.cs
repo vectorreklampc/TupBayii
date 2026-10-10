@@ -40,12 +40,13 @@ internal sealed class DenetimYazici
         string baglantiDizesi,
         DenetimYaziciTestKancalari? testKancalari)
     {
+        var gelen = new NpgsqlConnectionStringBuilder(baglantiDizesi);
         var olusturucu = new NpgsqlConnectionStringBuilder(baglantiDizesi)
         {
             Enlist = false,
             IncludeErrorDetail = false,
-            Timeout = Math.Min(5, new NpgsqlConnectionStringBuilder(baglantiDizesi).Timeout),
-            CommandTimeout = Math.Min(5, new NpgsqlConnectionStringBuilder(baglantiDizesi).CommandTimeout),
+            Timeout = IkincilTavan(gelen.Timeout),
+            CommandTimeout = IkincilTavan(gelen.CommandTimeout),
         };
         if (!string.Equals(olusturucu.Username, "audit_runtime", StringComparison.Ordinal))
         {
@@ -60,6 +61,9 @@ internal sealed class DenetimYazici
             throw new ArgumentOutOfRangeException(nameof(testKancalari));
         }
     }
+
+    private static int IkincilTavan(int yapilandirilmisSaniye) =>
+        yapilandirilmisSaniye <= 0 ? 5 : Math.Min(5, yapilandirilmisSaniye);
 
     internal async Task<DenetimYazmaSonucu> YazAsync(
         DenetimKarari karar,

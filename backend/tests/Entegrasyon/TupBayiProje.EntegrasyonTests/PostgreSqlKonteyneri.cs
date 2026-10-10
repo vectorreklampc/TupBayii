@@ -78,6 +78,8 @@ public sealed class PostgreSqlKonteyneri : IAsyncLifetime
         const string sql = """
             REVOKE ALL ON SCHEMA master FROM PUBLIC;
             REVOKE ALL ON TABLE master.denetim_kaydi FROM PUBLIC;
+            ALTER TABLE master.denetim_kaydi OWNER TO audit_migrator;
+            ALTER TABLE master."__AuditEFMigrationsHistory" OWNER TO audit_migrator;
             GRANT USAGE ON SCHEMA master TO audit_runtime;
             GRANT INSERT (id, karar_id, tenant_id, correlation_id, islem, sonuc, gerekce_kodu)
                 ON master.denetim_kaydi TO audit_runtime;
@@ -87,6 +89,12 @@ public sealed class PostgreSqlKonteyneri : IAsyncLifetime
             """;
         await KomutCalistirAsync(adminBaglantiDizesi, sql);
     }
+
+    public static Task TenancyOkumaYetkisiniUygulaAsync(string adminBaglantiDizesi) =>
+        KomutCalistirAsync(
+            adminBaglantiDizesi,
+            "GRANT USAGE ON SCHEMA master TO tenancy_runtime; " +
+            "GRANT SELECT (id) ON master.tenant TO tenancy_runtime");
 
     private async Task RuntimeRolleriniOlusturAsync()
     {

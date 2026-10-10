@@ -5,6 +5,7 @@ using Npgsql;
 using TupBayiProje.Moduller.Audit.Altyapi;
 using TupBayiProje.Moduller.Tenancy.Domain;
 using TupBayiProje.Moduller.Tenancy.Uygulama;
+using TupBayiProje.Api;
 using Xunit;
 
 namespace TupBayiProje.EntegrasyonTests;
@@ -30,6 +31,30 @@ public sealed class DenetimYaziciTests(PostgreSqlKonteyneri postgreSql)
         Assert.Equal(DenetimYazmaSonucu.Tekrar, await yazici.YazAsync(karar));
         Assert.Equal(DenetimYazmaSonucu.Catisma, await yazici.YazAsync(catismali));
         Assert.Equal(1, await KayitSayisiAsync(adminDizesi, karar.KararKimligi.TestDegeri));
+    }
+
+    [Fact]
+    public async Task HostCompositionRoot_TenancyTenantindenAuditKarariKalicilastirir()
+    {
+        var adminDizesi = await postgreSql.BosVeritabaniOlusturAsync();
+        await using var tenancyBaglami = PostgreSqlKonteyneri.BaglamOlustur(adminDizesi);
+        await tenancyBaglami.Database.MigrateAsync();
+        tenancyBaglami.Add(Tenant.Olustur());
+        await tenancyBaglami.SaveChangesAsync();
+        await using var auditBaglami = PostgreSqlKonteyneri.DenetimBaglamiOlustur(adminDizesi);
+        await auditBaglami.Database.MigrateAsync();
+        await PostgreSqlKonteyneri.AuditYetkileriniUygulaAsync(adminDizesi);
+        await PostgreSqlKonteyneri.TenancyOkumaYetkisiniUygulaAsync(adminDizesi);
+
+        var sonuc = await AuditCompositionRoot.SentetikIzinKarariYazAsync(
+            postgreSql.TenancyRuntimeBaglantiDizesi(adminDizesi),
+            postgreSql.AuditRuntimeBaglantiDizesi(adminDizesi));
+
+        Assert.Equal(DenetimYazmaSonucu.Kalici, sonuc);
+        await using var baglanti = new NpgsqlConnection(adminDizesi);
+        await baglanti.OpenAsync();
+        await using var komut = new NpgsqlCommand("SELECT count(*) FROM master.denetim_kaydi", baglanti);
+        Assert.Equal(1, (long)(await komut.ExecuteScalarAsync())!);
     }
 
     [Fact]

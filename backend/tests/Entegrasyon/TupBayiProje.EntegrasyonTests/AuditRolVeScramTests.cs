@@ -74,6 +74,14 @@ public sealed class AuditRolVeScramTests(PostgreSqlKonteyneri postgreSql)
             tenancyDizesi,
             "INSERT INTO master.denetim_kaydi (id, karar_id, tenant_id, correlation_id, islem, sonuc) VALUES ($1,$2,$3,$4,'TENANT_SECRET_OKUMA_KARARI','IZIN_VERILDI')",
             Guid.CreateVersion7(), Guid.CreateVersion7(), tenantA, Guid.CreateVersion7());
+        Assert.False(await SkalerAsync<bool>(adminDizesi, "SELECT has_table_privilege('public', 'master.denetim_kaydi', 'INSERT')"));
+        Assert.False(await SkalerAsync<bool>(adminDizesi, "SELECT pg_has_role('audit_runtime', 'audit_migrator', 'MEMBER')"));
+        Assert.Equal(
+            "audit_migrator",
+            await SkalerAsync<string>(adminDizesi, "SELECT tableowner FROM pg_catalog.pg_tables WHERE schemaname='master' AND tablename='denetim_kaydi'"));
+        Assert.Equal(
+            "audit_migrator",
+            await SkalerAsync<string>(adminDizesi, "SELECT tableowner FROM pg_catalog.pg_tables WHERE schemaname='master' AND tablename='__AuditEFMigrationsHistory'"));
     }
 
     private async Task<string> HazirVeritabaniAsync()
