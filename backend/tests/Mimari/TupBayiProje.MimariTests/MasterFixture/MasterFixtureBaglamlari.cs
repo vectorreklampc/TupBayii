@@ -22,6 +22,8 @@ public class WhitelistBaglami : DbContext
     {
         ArgumentNullException.ThrowIfNull(modelBuilder);
 
+        modelBuilder.HasDefaultSchema("master");
+
         foreach (var tip in BeklenenTipler)
         {
             var kayit = MasterVeritabaniBeyazListesi.Kayitlar.Single(kayit => kayit.VarlikAdi == tip.Name);
@@ -96,6 +98,24 @@ public sealed class YanlisTabloBaglami : WhitelistBaglami
     {
         base.OnModelCreating(modelBuilder);
         modelBuilder.Entity<Tenant>().ToTable("tenants");
+    }
+}
+
+public sealed class YanlisSemaBaglami : WhitelistBaglami
+{
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+        modelBuilder.Entity<Tenant>().ToTable("tenant", "public");
+    }
+}
+
+public sealed class TabloBolmeBaglami : WhitelistBaglami
+{
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+        modelBuilder.Entity<Tenant>().SplitToTable("tenant_ek", tablo => tablo.Property(tenant => tenant.Ad));
     }
 }
 

@@ -14,6 +14,7 @@ ownership kararı getirmez; yalnızca mevcut normatif kayıtları ve TBP-58 insa
 
 Bu listede olmayan hiçbir mapped entity Master DB'ye giremez. Liste değişikliği, ilgili SOT
 kaydı ve Jira kararı olmadan yapılamaz. Entity bölme/birleştirme de liste değişikliğidir.
+Tüm tablolar PostgreSQL `master` schema'sındadır; her entity tam olarak bir tabloya eşlenir.
 
 | Entity | Tablo | Sahip domain | SOT | Tutulan veri | Dayanak |
 |---|---|---|---|---|---|
@@ -47,8 +48,9 @@ ve tenant iş payload'ı içermez. Tenant iş işlemlerinin audit'i Master'a yaz
 | SOT §3 tenant operasyon kayıtları, `SOT-SYN/REP/NOT` | Kalıcı yasak | INV-TEN-002, ADR-002 |
 | Müşteri, cari, satış, sipariş, tüp/stok hareketi, kasa, teslimat, tedarikçi | Kalıcı yasak | TBP-58 açıklaması |
 
-EF Core'un Master şeması için tuttuğu `__EFMigrationsHistory` mapped entity değildir ve
-`TenantMigrationSurumu` ile karıştırılmaz.
+EF Core'un `master` schema'sında tuttuğu migration geçmişi tabloları (`__EFMigrationsHistory`,
+Audit için `__AuditEFMigrationsHistory`) mapped entity değildir ve `TenantMigrationSurumu` ile
+karıştırılmaz.
 
 ## 3. ID, FK ve cross-DB sınırı
 
@@ -63,7 +65,7 @@ EF Core'un Master şeması için tuttuğu `__EFMigrationsHistory` mapped entity 
 6. Cross-DB yan etkiler outbox/inbox ve idempotency ile yürür.
 
 TBP-59'a bırakılanlar: ID biçimi, Master içi domainler arası FK constraint kararı, kolon
-ayrıntıları, PostgreSQL schema eşlemesi, gerçek Master entity tipleri ve bunların namespace/assembly
+ayrıntıları, gerçek Master entity tipleri ve bunların namespace/assembly
 yerleşimi ve owned değer nesnelerine ilişkin nihai karar.
 
 ## 4. Doğrulama
@@ -73,7 +75,8 @@ yerleşimi ve owned değer nesnelerine ilişkin nihai karar.
    whitelist ile karşılaştırır. Kaynak kod regex taraması kanıt sayılmaz.
 3. Oracle: bilinmeyen entity FAIL; yasak örnek (`Musteri`, `Tedarikci`) FAIL; erken eklenmiş
    backup entity FAIL; owned tip FAIL; many-to-many join tipi FAIL; whitelist entity'sinin
-   farklı tabloya eşlenmesi FAIL; whitelist kısa adını taşıyan ama beklenen tip olmayan tip
+   farklı tabloya veya `master` dışı schema'ya eşlenmesi FAIL; entity splitting (`SplitToTable`)
+   ile ikinci tabloya bölünmesi FAIL; whitelist kısa adını taşıyan ama beklenen tip olmayan tip
    (farklı namespace veya aynı ad ve namespace ile farklı assembly) FAIL; yalnız beklenen
    whitelist tipleri PASS.
    - Tip kimliği: çağıran, beklenen Master entity CLR tiplerini (`Type`) oracle'a açıkça verir.
@@ -86,10 +89,9 @@ yerleşimi ve owned değer nesnelerine ilişkin nihai karar.
      Master entity tipleri ve bunların namespace/assembly yerleşimi TBP-59'da `MasterDbContext`
      ile belirlenir; gerçek testte bu tipler açıkça verilir. Bu sözleşme üretim assembly
      yerleşimi veya ownership kararı getirmez.
-   - PostgreSQL schema: TBP-58 normatif kaynakları Master tabloları için schema kararı vermez;
-     schema ayrıntısı TBP-59'a bırakılmıştır. Mevcut oracle yalnız tablo adını
-     (`GetTableName()`) doğrular, schema'yı (`GetSchema()`) doğrulamaz. Doğru tablo adının
-     farklı bir schema'ya eşlenmesi bu oracle tarafından yakalanmaz.
+   - Tablo eşlemesi: oracle yalnız `GetTableName()` değil, entity'nin tüm tablo eşlemelerini
+     (`GetTableMappings()`) okur. Eşlemeler tam olarak tek bir `master.<whitelist tablosu>` olmalıdır;
+     farklı schema, eksik tablo veya entity splitting ile eklenen ek tablo FAIL olur.
    - Owned tipler: owned değer nesnelerine genel izin verilmez. Oracle her owned tipi FAIL eder
      ve kapalı-liste davranışı korunur. Owned değer nesneleri için nihai karar TBP-59'da verilir.
 4. Master EF modelinde tenant iş entity'si bulunamaz; bu şart 2. ve 3. maddedeki runtime model

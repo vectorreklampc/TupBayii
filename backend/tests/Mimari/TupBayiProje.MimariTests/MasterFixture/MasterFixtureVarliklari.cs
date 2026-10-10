@@ -21,6 +21,10 @@ public sealed class Tenant
 {
     public Guid Id { get; set; }
 
+    public string? Kod { get; set; }
+
+    public string? Ad { get; set; }
+
     public ICollection<Kullanici> Kullanicilar { get; } = [];
 }
 

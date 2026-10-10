@@ -27,10 +27,13 @@ public static class MasterVeritabaniBeyazListesi
         new("DenetimKaydi", "denetim_kaydi", "Audit", "SOT-AUD-001"),
     ];
 
+    private const string MasterSemasi = "master";
+
     // Fail-closed: modeldeki her entity tipi (owned ve join dahil) cagiranin acikca verdigi beklenen
-    // CLR tiplerinden biriyle birebir ayni olmali ve whitelist'teki tabloya eslenmis olmalidir.
+    // CLR tiplerinden biriyle birebir ayni olmali ve yalniz master semasindaki whitelist tablosuna
+    // eslenmis olmalidir. Entity splitting ile eklenen ikinci tablo da ihlaldir.
     // Tip kimligi referans esitligiyle dogrulanir; ayni ad/namespace'li baska assembly tipi gecemez.
-    // Whitelist ust sinirdir; eksik entity ihlal degildir. Schema dogrulanmaz; schema karari TBP-59'dadir.
+    // Whitelist ust sinirdir; eksik entity ihlal degildir.
     public static IReadOnlyList<string> ModeliDogrula(IModel model, IReadOnlyCollection<Type> beklenenTipler)
     {
         ArgumentNullException.ThrowIfNull(model);
@@ -58,9 +61,18 @@ public static class MasterVeritabaniBeyazListesi
                     ? $"{varlik.Name}: whitelist adini tasiyor ama beklenen Master entity tipi degil ({varlik.ClrType.AssemblyQualifiedName})."
                     : $"{varlik.Name}: Master whitelist disi entity (tablo {tablo}).");
             }
-            else if (!string.Equals(kayit.TabloAdi, tablo, StringComparison.Ordinal))
+            else
             {
-                ihlaller.Add($"{varlik.Name}: tablo {tablo}, whitelist {kayit.TabloAdi} bekliyor.");
+                // GetTableName yalniz birincil tabloyu verir; SplitToTable eslemeleri burada gorunur.
+                var beklenenTablo = $"{MasterSemasi}.{kayit.TabloAdi}";
+                var tablolar = varlik.GetTableMappings()
+                    .Select(esleme => $"{esleme.Table.Schema ?? "(sema yok)"}.{esleme.Table.Name}")
+                    .ToArray();
+
+                if (tablolar is not [var tekTablo] || !string.Equals(tekTablo, beklenenTablo, StringComparison.Ordinal))
+                {
+                    ihlaller.Add($"{varlik.Name}: tablo eslemeleri [{string.Join(", ", tablolar)}], whitelist yalniz {beklenenTablo} bekliyor.");
+                }
             }
         }
 

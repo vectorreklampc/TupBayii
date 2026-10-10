@@ -1,4 +1,3 @@
-using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using TupBayiProje.MimariTests.MasterFixture;
 using Xunit;
@@ -7,26 +6,34 @@ namespace TupBayiProje.MimariTests;
 
 // Test-only fixture: yalnizca whitelist ve negatif oracle mantigini kanitlar.
 // Gercek MasterDbContext.Model uzerindeki whitelist testi TBP-59'a aittir; bu testler onun yerine gecmez.
-public sealed partial class MasterVeritabaniBeyazListesiTests
+public sealed class MasterVeritabaniBeyazListesiTests
 {
     // TBP-59 gercek MasterDbContext testinde bu deger gercek Master entity tipleri olmalidir.
     private static readonly IReadOnlyList<Type> FixtureTipleri = WhitelistBaglami.BeklenenTipler;
 
-    [Fact]
-    public void Kayitlar_KapaliListeOndortEntityVeTekilAdTabloIcerir()
-    {
-        var kayitlar = MasterVeritabaniBeyazListesi.Kayitlar;
-        string[] sotKimlikleri = ["SOT-IDN-001", "SOT-TEN-001", "SOT-PRV-001", "SOT-LIC-001", "SOT-DEV-001", "SOT-BIL-001", "SOT-AUD-001"];
+    // Bagimsiz sozlesme: docs/mimari/Master-DB-Sema-Sozlesmesi.md section 1 tablosunun elle yazilmis kopyasi.
+    // Kayitlar'dan uretilmez; entity, tablo, sahip domain veya SOT degisikligi bu testi kirar.
+    private static readonly MasterVarlikKaydi[] SozlesmeKayitlari =
+    [
+        new("Kullanici", "kullanici", "Identity", "SOT-IDN-001"),
+        new("KullaniciOturumu", "kullanici_oturumu", "Identity", "SOT-IDN-001"),
+        new("Tenant", "tenant", "Tenancy", "SOT-TEN-001"),
+        new("TenantVeritabani", "tenant_veritabani", "Tenancy", "SOT-TEN-001"),
+        new("TenantMigrationSurumu", "tenant_migration_surumu", "Tenancy", "SOT-TEN-001"),
+        new("TenantProvisioningIsi", "tenant_provisioning_isi", "Tenancy", "SOT-PRV-001"),
+        new("TenantMigrationIsi", "tenant_migration_isi", "Tenancy", "SOT-PRV-001"),
+        new("Abonelik", "abonelik", "Licensing", "SOT-LIC-001"),
+        new("Lisans", "lisans", "Licensing", "SOT-LIC-001"),
+        new("Cihaz", "cihaz", "Licensing", "SOT-DEV-001"),
+        new("OdemeNiyeti", "odeme_niyeti", "Billing", "SOT-BIL-001"),
+        new("OdemeDenemesi", "odeme_denemesi", "Billing", "SOT-BIL-001"),
+        new("OdemeSaglayiciOlayi", "odeme_saglayici_olayi", "Billing", "SOT-BIL-001"),
+        new("DenetimKaydi", "denetim_kaydi", "Audit", "SOT-AUD-001"),
+    ];
 
-        Assert.Equal(14, kayitlar.Count);
-        Assert.Equal(kayitlar.Count, kayitlar.Select(kayit => kayit.VarlikAdi).Distinct(StringComparer.Ordinal).Count());
-        Assert.Equal(kayitlar.Count, kayitlar.Select(kayit => kayit.TabloAdi).Distinct(StringComparer.Ordinal).Count());
-        Assert.All(kayitlar, kayit =>
-        {
-            Assert.Contains(kayit.SotKimligi, sotKimlikleri);
-            Assert.Matches(TabloAdiDeseni(), kayit.TabloAdi);
-        });
-    }
+    [Fact]
+    public void Kayitlar_SozlesmedekiOndortKaydaBirebirEsittir() =>
+        Assert.Equal(SozlesmeKayitlari, MasterVeritabaniBeyazListesi.Kayitlar);
 
     [Fact]
     public void ModeliDogrula_YalnizWhitelistEntityleri_IhlalUretmez()
@@ -64,6 +71,21 @@ public sealed partial class MasterVeritabaniBeyazListesiTests
     [Fact]
     public void ModeliDogrula_WhitelistEntitySinirDisiTabloya_IhlalUretir() =>
         TekIhlalBekle(new YanlisTabloBaglami(), "tenants");
+
+    [Fact]
+    public void ModeliDogrula_WhitelistEntityMasterDisiSemaya_IhlalUretir() =>
+        TekIhlalBekle(new YanlisSemaBaglami(), "public");
+
+    [Fact]
+    public void ModeliDogrula_WhitelistEntityIkinciTabloyaBolunurse_IhlalUretir()
+    {
+        using var baglam = new TabloBolmeBaglami();
+
+        // Entity splitting birincil tablo adini degistirmez; ek tablo yalniz tablo eslemelerinde gorunur.
+        Assert.Equal("tenant", baglam.Model.FindEntityType(typeof(Tenant))!.GetTableName());
+        var ihlal = Assert.Single(MasterVeritabaniBeyazListesi.ModeliDogrula(baglam.Model, FixtureTipleri));
+        Assert.Contains("tenant_ek", ihlal, StringComparison.Ordinal);
+    }
 
     [Fact]
     public void ModeliDogrula_AyniKisaAdliYabanciNamespaceTipi_IhlalUretir()
@@ -119,7 +141,4 @@ public sealed partial class MasterVeritabaniBeyazListesiTests
             Assert.Contains(beklenenIfade, ihlal, StringComparison.Ordinal);
         }
     }
-
-    [GeneratedRegex("^[a-z]+(_[a-z]+)*$")]
-    private static partial Regex TabloAdiDeseni();
 }
