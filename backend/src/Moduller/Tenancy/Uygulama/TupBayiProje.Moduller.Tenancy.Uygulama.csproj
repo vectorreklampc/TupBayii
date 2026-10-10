@@ -4,6 +4,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="TupBayiProje.Moduller.Tenancy.Altyapi" />
+    <InternalsVisibleTo Include="TupBayiProje.MimariTests" />
+    <InternalsVisibleTo Include="TupBayiProje.EntegrasyonTests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="../Domain/TupBayiProje.Moduller.Tenancy.Domain.csproj" />
     <ProjectReference Include="../Sozlesmeler/TupBayiProje.Moduller.Tenancy.Sozlesmeler.csproj" />
   </ItemGroup>

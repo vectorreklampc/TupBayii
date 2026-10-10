@@ -37,10 +37,21 @@ public sealed class AuditKararSozlesmesiTests
     {
         var karar = IzinKarariOlustur();
 
-        var retry = karar;
+        var retry = new DenetimKarari(
+            new KararKimligi(karar.KararKimligi.TestDegeri),
+            new CorrelationKimligi(karar.CorrelationKimligi.TestDegeri),
+            karar.TenantBaglami,
+            karar.Islem,
+            karar.Sonuc,
+            karar.GerekceKodu);
+        var yeniKarar = IzinKarariOlustur();
 
+        Assert.NotSame(karar.KararKimligi, retry.KararKimligi);
+        Assert.NotSame(karar.CorrelationKimligi, retry.CorrelationKimligi);
         Assert.Equal(karar.KararKimligi, retry.KararKimligi);
         Assert.Equal(karar.CorrelationKimligi, retry.CorrelationKimligi);
+        Assert.NotEqual(karar.KararKimligi, yeniKarar.KararKimligi);
+        Assert.NotEqual(karar.CorrelationKimligi, yeniKarar.CorrelationKimligi);
     }
 
     private static DenetimKarari IzinKarariOlustur() =>

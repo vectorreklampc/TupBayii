@@ -22,6 +22,17 @@ internal sealed class DenetimYaziciTestKancalari
     internal Func<CancellationToken, Task>? CommitSonrasi { get; init; }
 
     internal Func<CancellationToken, Task>? ReconciliationBasladi { get; init; }
+
+    internal Func<DenetimTemizlikAdimi, Task>? TemizlikAdimiBasliyor { get; init; }
+
+    internal Action<DenetimTemizlikAdimi>? TemizlikAdimiBitti { get; init; }
+}
+
+internal enum DenetimTemizlikAdimi
+{
+    Rollback,
+    TransactionDispose,
+    BaglantiDispose,
 }
 
 internal sealed class DenetimYazici
@@ -45,6 +56,10 @@ internal sealed class DenetimYazici
         {
             Enlist = false,
             IncludeErrorDetail = false,
+            // Close fiziksel baglantiyi bitirir; commit edilmemis transaction sunucuda geri alinir.
+            Pooling = false,
+            // Iptal aninda baglanti kirilir; Npgsql cancel yaniti icin deadline disinda beklemez.
+            CancellationTimeout = -1,
             Timeout = IkincilTavan(gelen.Timeout),
             CommandTimeout = IkincilTavan(gelen.CommandTimeout),
         };
@@ -61,6 +76,9 @@ internal sealed class DenetimYazici
             throw new ArgumentOutOfRangeException(nameof(testKancalari));
         }
     }
+
+    // Yalniz ayar dogrulamasi icindir; baglanti dizesi test ciktisina yazilmaz.
+    internal NpgsqlConnectionStringBuilder TestBaglantiAyarlari => new(_baglantiDizesi);
 
     private static int IkincilTavan(int yapilandirilmisSaniye) =>
         yapilandirilmisSaniye <= 0 ? 5 : Math.Min(5, yapilandirilmisSaniye);
@@ -115,23 +133,7 @@ internal sealed class DenetimYazici
         }
         finally
         {
-            if (transaction is not null && !commitTamamlandi)
-            {
-                await FazHatasiniYutAsync(() => transaction.RollbackAsync(deadline.Token));
-            }
-
-            if (transaction is not null)
-            {
-                await FazHatasiniYutAsync(
-                    () => transaction.DisposeAsync().AsTask().WaitAsync(deadline.Token));
-            }
-
-            if (baglanti is not null)
-            {
-                await FazHatasiniYutAsync(() => baglanti.CloseAsync().WaitAsync(deadline.Token));
-                await FazHatasiniYutAsync(
-                    () => baglanti.DisposeAsync().AsTask().WaitAsync(deadline.Token));
-            }
+            await TemizligiBekleAsync(baglanti, transaction, commitTamamlandi, deadline.Token);
         }
 
         if (sonuc == DenetimYazmaSonucu.Kalici)
@@ -222,27 +224,100 @@ internal sealed class DenetimYazici
         }
         finally
         {
-            if (baglanti is not null)
-            {
-                await FazHatasiniYutAsync(() => baglanti.CloseAsync().WaitAsync(deadline.Token));
-                await FazHatasiniYutAsync(
-                    () => baglanti.DisposeAsync().AsTask().WaitAsync(deadline.Token));
-            }
+            await TemizligiBekleAsync(baglanti, null, false, deadline.Token);
         }
 
         return deadline.Aktif ? sonuc : DenetimYazmaSonucu.BelirsizGuvenliHata;
     }
 
-    private static async Task FazHatasiniYutAsync(Func<Task> faz)
+    // Tek sirali cleanup zinciri yalniz bir kez deadline ile beklenir. Deadline dolarsa caller
+    // fail-closed devam eder; zincir arka planda kendi sirasiyla biter ve ayni baglantida ikinci
+    // operasyon baslatilmaz.
+    private async Task TemizligiBekleAsync(
+        NpgsqlConnection? baglanti,
+        NpgsqlTransaction? transaction,
+        bool transactionTamamlandi,
+        CancellationToken deadlineToken)
     {
+        var zincir = TemizleAsync(baglanti, transaction, transactionTamamlandi, deadlineToken);
         try
         {
-            await faz();
+            await zincir.WaitAsync(deadlineToken);
+        }
+        catch
+        {
+            // AdimAsync hatalari yuttugu icin zincir fault beklenmez; yine de nihai istisna gozlenir.
+            _ = zincir.ContinueWith(
+                static g => _ = g.Exception,
+                CancellationToken.None,
+                TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+                TaskScheduler.Default);
+        }
+    }
+
+    // NpgsqlConnection thread-safe degildir: her adim bir oncekinin bitmesini bekler.
+    private async Task TemizleAsync(
+        NpgsqlConnection? baglanti,
+        NpgsqlTransaction? transaction,
+        bool transactionTamamlandi,
+        CancellationToken deadlineToken)
+    {
+        if (transaction is not null)
+        {
+            if (!transactionTamamlandi)
+            {
+                transactionTamamlandi = await AdimAsync(
+                    DenetimTemizlikAdimi.Rollback,
+                    () => transaction.RollbackAsync(deadlineToken));
+            }
+
+            // Tamamlanmamis transaction'in DisposeAsync'i tokensiz rollback I/O'su yapar; bu durumda
+            // atlanir ve non-pooled baglantinin kapanmasi sunucu tarafinda rollback'i garanti eder.
+            if (transactionTamamlandi)
+            {
+                await AdimAsync(
+                    DenetimTemizlikAdimi.TransactionDispose,
+                    () => transaction.DisposeAsync().AsTask());
+            }
+        }
+
+        if (baglanti is not null)
+        {
+            await AdimAsync(
+                DenetimTemizlikAdimi.BaglantiDispose,
+                () => baglanti.DisposeAsync().AsTask());
+        }
+    }
+
+    // Hicbir hata disari cikmaz: zincirin task'i fault olmaz, arka planda kalsa da gozlemsiz istisna uretmez.
+    private async Task<bool> AdimAsync(DenetimTemizlikAdimi adim, Func<Task> islem)
+    {
+        var basarili = false;
+        try
+        {
+            if (_testKancalari?.TemizlikAdimiBasliyor is not null)
+            {
+                await _testKancalari.TemizlikAdimiBasliyor(adim);
+            }
+
+            await islem();
+            basarili = true;
         }
         catch
         {
             // Cleanup basariya cevrilmez; asil sonuc fail-closed kalir.
         }
+
+        try
+        {
+            _testKancalari?.TemizlikAdimiBitti?.Invoke(adim);
+        }
+        catch
+        {
+            // Yalniz test gozlemcisidir; cleanup sirasini etkilemez.
+        }
+
+        return basarili;
     }
 
     private sealed class MonotonicDeadline : IDisposable
