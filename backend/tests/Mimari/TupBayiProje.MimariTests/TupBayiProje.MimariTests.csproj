@@ -17,6 +17,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\src\Moduller\Audit\Altyapi\TupBayiProje.Moduller.Audit.Altyapi.csproj" />
     <ProjectReference Include="..\..\..\src\Moduller\Tenancy\Altyapi\TupBayiProje.Moduller.Tenancy.Altyapi.csproj" />
+    <ProjectReference Include="..\..\..\src\Moduller\Tenancy\Uygulama\TupBayiProje.Moduller.Tenancy.Uygulama.csproj" />
   </ItemGroup>
 </Project>

@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <RootNamespace>TupBayiProje.Moduller.Tenancy.Altyapi</RootNamespace>
+    <RootNamespace>TupBayiProje.Moduller.Audit.Altyapi</RootNamespace>
     <TupBayiVeritabaniSiniri>Master</TupBayiVeritabaniSiniri>
   </PropertyGroup>
 
@@ -15,12 +15,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../Domain/TupBayiProje.Moduller.Tenancy.Domain.csproj" />
-    <ProjectReference Include="../Sozlesmeler/TupBayiProje.Moduller.Tenancy.Sozlesmeler.csproj" />
-    <ProjectReference Include="../Uygulama/TupBayiProje.Moduller.Tenancy.Uygulama.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <InternalsVisibleTo Include="TupBayiProje.EntegrasyonTests" />
+    <ProjectReference Include="../../Tenancy/Sozlesmeler/TupBayiProje.Moduller.Tenancy.Sozlesmeler.csproj" />
   </ItemGroup>
 </Project>
