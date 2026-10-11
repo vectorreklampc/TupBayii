@@ -11,7 +11,7 @@
 - `apiBehaviors`: satırın davranış id'leri. Kök `apiBehaviors` kataloğu her davranışı `sourceJira`, `operationId` ve `schemas` ile `contracts/openapi.json`'a bağlar.
 - `openapi.operationIds` / `schemas`: satırın `apiBehaviors` kayıtlarının operationId ve schema birleşimi; hepsi `contracts/openapi.json`'da gerçekten bulunur. Contract `/api/v1` altında operasyonlar ve `bearerAuth` security scheme'i tanımlar: yalnız `login` kimliksizdir, diğerleri bearer ister; stok/satış/kasa yazmaları `Idempotency-Key` header'ı ve 409 `IDEMPOTENCY_CONFLICT`/`IDEMPOTENCY_IN_PROGRESS` taşır. Önerilmiş/uydurma operationId yazılmaz.
 - `figma`: dosya `unveOhyF2AlrBYA34ez6x6` ve node kanıtı (`VERIFIED` / `CANDIDATE`).
-- `states`: `loading`, `empty`, `validation`, `permission`, `networkError`, `success`; her biri `UNVERIFIED`/`VERIFIED`.
+- `states`: `loading`, `empty`, `validation`, `permission`, `networkError`, `success`; her biri `UNVERIFIED`/`CANDIDATE`/`VERIFIED` ve kanıt `figmaNode`'u.
 - `testOracle`: `{status, ids}`; `VERIFIED` ise `ids` kök `testOracles` kataloğunda bu satırı kapsayan tek kaydı gösterir.
 - `readiness` (`BLOCKED`/`READY`), `humanApproval`, `blockers`.
 
@@ -31,13 +31,20 @@ Kök `testOracles` kataloğu her test oracle Jira'sını `pilotJira` (sorumlu ka
 
 ## Kanıt durumu
 
-| Durum | Node'lar |
-|---|---|
-| VERIFIED (Windows) | POS ana `4:2`, ödeme/tamamlama `7:609`, yetersiz stok `8:169`, kredi limiti `8:211`, stok ana `7:390`, sayım farkı `8:87` |
-| CANDIDATE (bu turda doğrulanamadı) | müşteri ana `7:2`, yeni `8:2`, detay `70:2`, mobil müşteri `34:2`, fiyat/depozito `41:246`, cari `7:187` |
-| Kanıtsız | Login, Kasa, mobil akışlar ve tüm required state node'ları (Figma View kotası doldu) |
+Kayıtlı tüm Figma node'ları ve state'ler `VERIFIED`; kanıtlar tarayıcıda Figma dosyası üzerinden doğrulandı. Figma MCP kotası tarayıcıyla doğrulamayı engellemedi, AI kredisi harcanmadı ve yeni tasarım üretilmedi; mevcut tasarımlar yeniden kullanıldı.
 
-VERIFIED ekran node'u state kanıtı değildir: 6 state'in hepsi `UNVERIFIED`. Test oracle tanımları artık var (tüm satırlar `testOracle: VERIFIED`), ama bu tek başına `READY` yapmaz. İnsan onayı yoktur (`humanApproval: false`), bu nedenle **12 satırın tamamı `BLOCKED`**.
+| Satır | Windows node'ları | Android node'ları |
+|---|---|---|
+| Login | login `47:74` | mobil login `47:150` |
+| Müşteri | müşteri ana `7:2`, yeni `8:2`, detay `70:2`, cari `7:187` | mobil müşteri `34:2` |
+| Ürün/Fiyat | fiyat/depozito `41:246` | müşteri/sipariş girişi ve son satış fiyatı `34:2`, ürün/adet görev kartları `32:37` |
+| Satış | POS ana `4:2`, ödeme/tamamlama `7:609`, yetersiz stok `8:169`, kredi limiti `8:211` | `32:37`, `32:92`, ödeme `32:141`, kasa hareketi özeti `61:35` |
+| Stok | stok ana `7:390`, sayım farkı `8:87` | mobil stok `34:64` |
+| Kasa Özeti | kasa özeti `31:166` | — (tasarım/handoff yok) |
+
+6 zorunlu state (`loading`, `empty`, `validation`, `permission`, `networkError`, `success`) her satırda ortak POS durum/tamlık panosu `42:84` ile `VERIFIED`. OpenAPI ve test oracle kanıtları tamam.
+
+**11 satır `READY`** (`humanApproval: true`, `blockers` boş). **`android-kasaOzeti` `BLOCKED`**: `figma.nodes` boş, `humanApproval: false`. Ödeme `32:141` ve satış sonrası kasa hareketi özeti `61:35` Satış akışının kanıtıdır; günlük kasa özeti, kasa açılışı ve gün sonu sayımı ekranlarını göstermez, bu yüzden Kasa Özeti kanıtı sayılmaz. Blocker'lar: Android günlük kasa özeti, kasa açılışı ve gün sonu sayımı için Figma tasarım/handoff node'u yok; insan onayı yok.
 
 ## Kapsam dışı ve release yolu
 
@@ -48,7 +55,7 @@ VERIFIED ekran node'u state kanıtı değildir: 6 state'in hepsi `UNVERIFIED`. T
 
 ## UI kapısı
 
-Bir satır UI implementasyonuna ancak `READY` olunca geçer: OpenAPI'de gerçek operationId ve schema, katalogda kayıtlı `testOracle`, tüm Figma node'ları ve 6 state `VERIFIED`, `humanApproval: true`, blocker yok. Validator bunu zorlar; eksikleri gizlemez, yalnız sahte `READY`'yi reddeder.
+Bir satır UI implementasyonuna ancak `READY` olunca geçer: OpenAPI'de gerçek operationId ve schema, katalogda kayıtlı `testOracle`, tüm Figma node'ları ve 6 state `VERIFIED`, `humanApproval: true`, blocker yok. Validator bunu zorlar; kanıtı eksik bir satırın `READY` işaretlenmesini (sahte `READY`) reddeder.
 
 ## Doğrulama
 

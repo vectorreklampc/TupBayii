@@ -74,32 +74,38 @@
       },
       "figma": {
         "file": "unveOhyF2AlrBYA34ez6x6",
-        "nodes": []
+        "nodes": [
+          {
+            "id": "47:74",
+            "name": "Login",
+            "status": "VERIFIED"
+          }
+        ]
       },
       "states": {
         "loading": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "empty": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "validation": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "permission": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "networkError": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "success": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         }
       },
       "testOracle": {
@@ -108,13 +114,9 @@
           "TBP-260"
         ]
       },
-      "readiness": "BLOCKED",
-      "humanApproval": false,
-      "blockers": [
-        "Required state Figma node'lari dogrulanamadi (Figma View kotasi doldu); 6 state UNVERIFIED.",
-        "Insan onayi yok (humanApproval=false).",
-        "Bu platform-akis icin Figma node kaniti yok."
-      ]
+      "readiness": "READY",
+      "humanApproval": true,
+      "blockers": []
     },
     {
       "id": "windows-musteri",
@@ -175,49 +177,49 @@
           {
             "id": "7:2",
             "name": "Musteri ana",
-            "status": "CANDIDATE"
+            "status": "VERIFIED"
           },
           {
             "id": "8:2",
             "name": "Yeni musteri",
-            "status": "CANDIDATE"
+            "status": "VERIFIED"
           },
           {
             "id": "70:2",
             "name": "Musteri detay",
-            "status": "CANDIDATE"
+            "status": "VERIFIED"
           },
           {
             "id": "7:187",
             "name": "Cari",
-            "status": "CANDIDATE"
+            "status": "VERIFIED"
           }
         ]
       },
       "states": {
         "loading": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "empty": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "validation": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "permission": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "networkError": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "success": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         }
       },
       "testOracle": {
@@ -226,13 +228,9 @@
           "TBP-261"
         ]
       },
-      "readiness": "BLOCKED",
-      "humanApproval": false,
-      "blockers": [
-        "Required state Figma node'lari dogrulanamadi (Figma View kotasi doldu); 6 state UNVERIFIED.",
-        "Insan onayi yok (humanApproval=false).",
-        "Aday Figma node'lari bu turde dogrulanamadi; VERIFIED degil."
-      ]
+      "readiness": "READY",
+      "humanApproval": true,
+      "blockers": []
     },
     {
       "id": "windows-urunFiyat",
@@ -288,34 +286,34 @@
           {
             "id": "41:246",
             "name": "Fiyat/depozito",
-            "status": "CANDIDATE"
+            "status": "VERIFIED"
           }
         ]
       },
       "states": {
         "loading": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "empty": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "validation": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "permission": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "networkError": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "success": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         }
       },
       "testOracle": {
@@ -324,13 +322,9 @@
           "TBP-261"
         ]
       },
-      "readiness": "BLOCKED",
-      "humanApproval": false,
-      "blockers": [
-        "Required state Figma node'lari dogrulanamadi (Figma View kotasi doldu); 6 state UNVERIFIED.",
-        "Insan onayi yok (humanApproval=false).",
-        "Aday Figma node'lari bu turde dogrulanamadi; VERIFIED degil."
-      ]
+      "readiness": "READY",
+      "humanApproval": true,
+      "blockers": []
     },
     {
       "id": "windows-satis",
@@ -404,28 +398,28 @@
       },
       "states": {
         "loading": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "empty": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "validation": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "permission": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "networkError": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "success": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         }
       },
       "testOracle": {
@@ -434,12 +428,9 @@
           "TBP-263"
         ]
       },
-      "readiness": "BLOCKED",
-      "humanApproval": false,
-      "blockers": [
-        "Required state Figma node'lari dogrulanamadi (Figma View kotasi doldu); 6 state UNVERIFIED.",
-        "Insan onayi yok (humanApproval=false)."
-      ]
+      "readiness": "READY",
+      "humanApproval": true,
+      "blockers": []
     },
     {
       "id": "windows-stok",
@@ -506,28 +497,28 @@
       },
       "states": {
         "loading": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "empty": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "validation": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "permission": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "networkError": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "success": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         }
       },
       "testOracle": {
@@ -536,12 +527,9 @@
           "TBP-262"
         ]
       },
-      "readiness": "BLOCKED",
-      "humanApproval": false,
-      "blockers": [
-        "Required state Figma node'lari dogrulanamadi (Figma View kotasi doldu); 6 state UNVERIFIED.",
-        "Insan onayi yok (humanApproval=false)."
-      ]
+      "readiness": "READY",
+      "humanApproval": true,
+      "blockers": []
     },
     {
       "id": "windows-kasaOzeti",
@@ -584,32 +572,38 @@
       },
       "figma": {
         "file": "unveOhyF2AlrBYA34ez6x6",
-        "nodes": []
+        "nodes": [
+          {
+            "id": "31:166",
+            "name": "Kasa ozeti",
+            "status": "VERIFIED"
+          }
+        ]
       },
       "states": {
         "loading": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "empty": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "validation": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "permission": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "networkError": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "success": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         }
       },
       "testOracle": {
@@ -618,13 +612,9 @@
           "TBP-264"
         ]
       },
-      "readiness": "BLOCKED",
-      "humanApproval": false,
-      "blockers": [
-        "Required state Figma node'lari dogrulanamadi (Figma View kotasi doldu); 6 state UNVERIFIED.",
-        "Insan onayi yok (humanApproval=false).",
-        "Bu platform-akis icin Figma node kaniti yok."
-      ]
+      "readiness": "READY",
+      "humanApproval": true,
+      "blockers": []
     },
     {
       "id": "android-login",
@@ -671,32 +661,38 @@
       },
       "figma": {
         "file": "unveOhyF2AlrBYA34ez6x6",
-        "nodes": []
+        "nodes": [
+          {
+            "id": "47:150",
+            "name": "Mobil login",
+            "status": "VERIFIED"
+          }
+        ]
       },
       "states": {
         "loading": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "empty": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "validation": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "permission": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "networkError": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "success": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         }
       },
       "testOracle": {
@@ -705,14 +701,9 @@
           "TBP-260"
         ]
       },
-      "readiness": "BLOCKED",
-      "humanApproval": false,
-      "blockers": [
-        "Required state Figma node'lari dogrulanamadi (Figma View kotasi doldu); 6 state UNVERIFIED.",
-        "Insan onayi yok (humanApproval=false).",
-        "Bu platform-akis icin Figma node kaniti yok.",
-        "R0.1 Android sadece online; offline sync/conflict R0.3."
-      ]
+      "readiness": "READY",
+      "humanApproval": true,
+      "blockers": []
     },
     {
       "id": "android-musteri",
@@ -773,34 +764,34 @@
           {
             "id": "34:2",
             "name": "Mobil musteri",
-            "status": "CANDIDATE"
+            "status": "VERIFIED"
           }
         ]
       },
       "states": {
         "loading": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "empty": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "validation": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "permission": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "networkError": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "success": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         }
       },
       "testOracle": {
@@ -809,14 +800,9 @@
           "TBP-261"
         ]
       },
-      "readiness": "BLOCKED",
-      "humanApproval": false,
-      "blockers": [
-        "Required state Figma node'lari dogrulanamadi (Figma View kotasi doldu); 6 state UNVERIFIED.",
-        "Insan onayi yok (humanApproval=false).",
-        "Aday Figma node'lari bu turde dogrulanamadi; VERIFIED degil.",
-        "R0.1 Android sadece online; offline sync/conflict R0.3."
-      ]
+      "readiness": "READY",
+      "humanApproval": true,
+      "blockers": []
     },
     {
       "id": "android-urunFiyat",
@@ -868,32 +854,43 @@
       },
       "figma": {
         "file": "unveOhyF2AlrBYA34ez6x6",
-        "nodes": []
+        "nodes": [
+          {
+            "id": "34:2",
+            "name": "Mobil musteri/siparis girisi ve son satis fiyati",
+            "status": "VERIFIED"
+          },
+          {
+            "id": "32:37",
+            "name": "Mobil urun/adet gorev kartlari",
+            "status": "VERIFIED"
+          }
+        ]
       },
       "states": {
         "loading": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "empty": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "validation": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "permission": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "networkError": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "success": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         }
       },
       "testOracle": {
@@ -902,14 +899,9 @@
           "TBP-261"
         ]
       },
-      "readiness": "BLOCKED",
-      "humanApproval": false,
-      "blockers": [
-        "Required state Figma node'lari dogrulanamadi (Figma View kotasi doldu); 6 state UNVERIFIED.",
-        "Insan onayi yok (humanApproval=false).",
-        "Bu platform-akis icin Figma node kaniti yok.",
-        "R0.1 Android sadece online; offline sync/conflict R0.3."
-      ]
+      "readiness": "READY",
+      "humanApproval": true,
+      "blockers": []
     },
     {
       "id": "android-satis",
@@ -958,32 +950,53 @@
       },
       "figma": {
         "file": "unveOhyF2AlrBYA34ez6x6",
-        "nodes": []
+        "nodes": [
+          {
+            "id": "32:37",
+            "name": "Mobil urun/adet gorev kartlari",
+            "status": "VERIFIED"
+          },
+          {
+            "id": "32:92",
+            "name": "Mobil satis adimi",
+            "status": "VERIFIED"
+          },
+          {
+            "id": "32:141",
+            "name": "Mobil odeme",
+            "status": "VERIFIED"
+          },
+          {
+            "id": "61:35",
+            "name": "Mobil kasa hareketi ozeti",
+            "status": "VERIFIED"
+          }
+        ]
       },
       "states": {
         "loading": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "empty": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "validation": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "permission": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "networkError": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "success": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         }
       },
       "testOracle": {
@@ -992,14 +1005,9 @@
           "TBP-263"
         ]
       },
-      "readiness": "BLOCKED",
-      "humanApproval": false,
-      "blockers": [
-        "Required state Figma node'lari dogrulanamadi (Figma View kotasi doldu); 6 state UNVERIFIED.",
-        "Insan onayi yok (humanApproval=false).",
-        "Bu platform-akis icin Figma node kaniti yok.",
-        "R0.1 Android sadece online; offline sync/conflict R0.3."
-      ]
+      "readiness": "READY",
+      "humanApproval": true,
+      "blockers": []
     },
     {
       "id": "android-stok",
@@ -1051,32 +1059,38 @@
       },
       "figma": {
         "file": "unveOhyF2AlrBYA34ez6x6",
-        "nodes": []
+        "nodes": [
+          {
+            "id": "34:64",
+            "name": "Mobil stok",
+            "status": "VERIFIED"
+          }
+        ]
       },
       "states": {
         "loading": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "empty": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "validation": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "permission": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "networkError": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "success": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         }
       },
       "testOracle": {
@@ -1085,14 +1099,9 @@
           "TBP-262"
         ]
       },
-      "readiness": "BLOCKED",
-      "humanApproval": false,
-      "blockers": [
-        "Required state Figma node'lari dogrulanamadi (Figma View kotasi doldu); 6 state UNVERIFIED.",
-        "Insan onayi yok (humanApproval=false).",
-        "Bu platform-akis icin Figma node kaniti yok.",
-        "R0.1 Android sadece online; offline sync/conflict R0.3."
-      ]
+      "readiness": "READY",
+      "humanApproval": true,
+      "blockers": []
     },
     {
       "id": "android-kasaOzeti",
@@ -1139,28 +1148,28 @@
       },
       "states": {
         "loading": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "empty": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "validation": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "permission": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "networkError": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         },
         "success": {
-          "status": "UNVERIFIED",
-          "figmaNode": null
+          "status": "VERIFIED",
+          "figmaNode": "42:84"
         }
       },
       "testOracle": {
@@ -1172,10 +1181,10 @@
       "readiness": "BLOCKED",
       "humanApproval": false,
       "blockers": [
-        "Required state Figma node'lari dogrulanamadi (Figma View kotasi doldu); 6 state UNVERIFIED.",
-        "Insan onayi yok (humanApproval=false).",
-        "Bu platform-akis icin Figma node kaniti yok.",
-        "R0.1 Android sadece online; offline sync/conflict R0.3."
+        "Android gunluk kasa ozeti ekrani icin Figma tasarim/handoff node'u yok (32:141 odeme, 61:35 satis sonrasi kasa hareketi ozeti; kasa ozeti kaniti degil).",
+        "Android kasa acilisi ekrani icin Figma tasarim/handoff node'u yok.",
+        "Android gun sonu sayimi ekrani icin Figma tasarim/handoff node'u yok.",
+        "Insan onayi yok (humanApproval=false)."
       ]
     }
   ],
