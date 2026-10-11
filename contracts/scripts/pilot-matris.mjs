@@ -11,6 +11,8 @@ const akisJira = {
 const durumlar = ['loading', 'empty', 'validation', 'permission', 'networkError', 'success'];
 const surumler = ['R0.1', 'R0.2', 'R0.3', 'R1.0'];
 const jiraDeseni = /^TBP-\d+$/;
+// TBP-258: test oracle'larinin calistirma kaniti; oracle tanimi kosu sonucu degildir.
+const testYurutmeJira = 'TBP-258';
 
 function dogrula(kosul, mesaj) {
   if (!kosul) throw new Error(mesaj);
@@ -157,14 +159,44 @@ function davranisDogrula(matris, ops, semalar, openapi) {
   return new Map(davranislar.map((d) => [d.id, d]));
 }
 
-function testOracleDogrula(yer, oracle) {
-  const { status, ids } = oracle ?? {};
+// Kok testOracles katalogu: her kayit bir Jira oracle tanimi, sahibi pilotJira, kosu kaniti TBP-258.
+// Donus: bilinen oracle id'leri ve satir id -> o satiri kapsayan tek oracle kaydi.
+function oracleKatalogDogrula(matris) {
+  const katalog = matris.testOracles;
+  dogrula(Array.isArray(katalog) && katalog.length > 0, 'testOracles katalogu dolu dizi olmali');
+  const satirIdleri = new Set(matris.rows.map((s) => s.id));
+  const idler = new Set();
+  const kapsam = new Map();
+  for (const o of katalog) {
+    dogrula(jiraDeseni.test(o?.id) && !idler.has(o.id), `testOracles id tekil TBP anahtari olmali: ${o?.id}`);
+    idler.add(o.id);
+    dogrula(jiraDeseni.test(o.pilotJira), `testOracles ${o.id}: pilotJira gecerli TBP anahtari olmali`);
+    dogrula(o.executionJira === testYurutmeJira, `testOracles ${o.id}: executionJira ${testYurutmeJira} olmali`);
+    dogrula(Array.isArray(o.rows) && o.rows.length > 0, `testOracles ${o.id}: rows dolu dizi olmali`);
+    for (const satirId of o.rows) {
+      dogrula(satirIdleri.has(satirId), `testOracles ${o.id}: bilinmeyen satir ${satirId}`);
+      dogrula(!kapsam.has(satirId), `testOracles ${o.id}: satir ${satirId} birden fazla oracle ile kapsanamaz`);
+      kapsam.set(satirId, o);
+    }
+  }
+  return { idler, kapsam };
+}
+
+// Satir testOracle'i katalogla iki yonlu eslesir: VERIFIED <=> satiri kapsayan kayit var.
+function testOracleDogrula(satir, oracleler) {
+  const yer = satir.id;
+  const { status, ids } = satir.testOracle ?? {};
   dogrula(['MISSING', 'VERIFIED'].includes(status) && Array.isArray(ids) && ids.every((k) => jiraDeseni.test(k)),
     `${yer}: testOracle {status: MISSING|VERIFIED, ids: TBP anahtarlari} olmali`);
   dogrula((status === 'VERIFIED') === (ids.length > 0), `${yer}: testOracle VERIFIED ise ID zorunlu, MISSING ise ID bos olmali`);
+  dogrula(ids.every((k) => oracleler.idler.has(k)), `${yer}: testOracle ids testOracles katalogunda bulunmali`);
+  const kayit = oracleler.kapsam.get(yer);
+  dogrula(kayit ? ids.length === 1 && ids[0] === kayit.id : ids.length === 0,
+    `${yer}: testOracle ids yalniz bu satiri kapsayan katalog kaydini icermeli (${kayit?.id ?? 'yok'})`);
+  if (kayit) dogrula(kayit.pilotJira === satir.pilotJira, `${yer}: testOracle ${kayit.id} pilotJira satir pilotJira ile eslesmeli`);
 }
 
-function satirDogrula(satir, matris, davranislar, kimlikler, semalar) {
+function satirDogrula(satir, matris, davranislar, kimlikler, semalar, oracleler) {
   const yer = satir.id ?? '?';
   dogrula(satir.pilotJira === akisJira[satir.flow], `${yer}: pilotJira beklenen Jira ile eslesmeli`);
   dogrula(satir.platformJira === platformJira[satir.platform], `${yer}: platformJira beklenen Jira ile eslesmeli`);
@@ -176,7 +208,7 @@ function satirDogrula(satir, matris, davranislar, kimlikler, semalar) {
     `${yer}: requirements pilotJira ve platformJira icermeli`);
   dogrula(typeof satir.humanApproval === 'boolean', `${yer}: humanApproval boolean olmali`);
   dogrula(Array.isArray(satir.blockers), `${yer}: blockers dizi olmali`);
-  testOracleDogrula(yer, satir.testOracle);
+  testOracleDogrula(satir, oracleler);
   dogrula(Array.isArray(satir.apiBehaviors) && satir.apiBehaviors.length > 0 &&
     satir.apiBehaviors.every((id) => davranislar.has(id)), `${yer}: apiBehaviors katalogdaki id'lere referans vermeli`);
   dogrula(Object.keys(satir.states ?? {}).sort().join() === [...durumlar].sort().join(),
@@ -226,10 +258,14 @@ export function pilotMatrisDogrula(matris, openapi) {
   const beklenen = Object.keys(platformJira).flatMap((p) => Object.keys(akisJira).map((a) => `${p}/${a}`));
   dogrula(kombinasyonlar.size === 12 && beklenen.every((k) => kombinasyonlar.has(k)),
     'Windows/Android x Login, Musteri, Urun/Fiyat, Satis, Stok, Kasa Ozeti kombinasyonlari tam ve tekil olmali');
+  // Tekil kombinasyon + bu kural satir id'lerini tekil yapar; oracle kapsami id ile baglanir.
+  const hataliId = matris.rows.find((s) => s.id !== `${s.platform}-${s.flow}`);
+  dogrula(!hataliId, `${hataliId?.id}: satir id platform-flow olmali`);
   const kimlikler = operasyonlar(openapi);
   const semalar = openapi.components?.schemas ?? {};
   const davranislar = davranisDogrula(matris, kimlikler, semalar, openapi);
-  for (const satir of matris.rows) satirDogrula(satir, matris, davranislar, kimlikler, semalar);
+  const oracleler = oracleKatalogDogrula(matris);
+  for (const satir of matris.rows) satirDogrula(satir, matris, davranislar, kimlikler, semalar, oracleler);
   return true;
 }
 

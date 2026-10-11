@@ -103,13 +103,14 @@
         }
       },
       "testOracle": {
-        "status": "MISSING",
-        "ids": []
+        "status": "VERIFIED",
+        "ids": [
+          "TBP-260"
+        ]
       },
       "readiness": "BLOCKED",
       "humanApproval": false,
       "blockers": [
-        "Test oracle ID'si yok (testOracle MISSING).",
         "Required state Figma node'lari dogrulanamadi (Figma View kotasi doldu); 6 state UNVERIFIED.",
         "Insan onayi yok (humanApproval=false).",
         "Bu platform-akis icin Figma node kaniti yok."
@@ -220,13 +221,14 @@
         }
       },
       "testOracle": {
-        "status": "MISSING",
-        "ids": []
+        "status": "VERIFIED",
+        "ids": [
+          "TBP-261"
+        ]
       },
       "readiness": "BLOCKED",
       "humanApproval": false,
       "blockers": [
-        "Test oracle ID'si yok (testOracle MISSING).",
         "Required state Figma node'lari dogrulanamadi (Figma View kotasi doldu); 6 state UNVERIFIED.",
         "Insan onayi yok (humanApproval=false).",
         "Aday Figma node'lari bu turde dogrulanamadi; VERIFIED degil."
@@ -317,13 +319,14 @@
         }
       },
       "testOracle": {
-        "status": "MISSING",
-        "ids": []
+        "status": "VERIFIED",
+        "ids": [
+          "TBP-261"
+        ]
       },
       "readiness": "BLOCKED",
       "humanApproval": false,
       "blockers": [
-        "Test oracle ID'si yok (testOracle MISSING).",
         "Required state Figma node'lari dogrulanamadi (Figma View kotasi doldu); 6 state UNVERIFIED.",
         "Insan onayi yok (humanApproval=false).",
         "Aday Figma node'lari bu turde dogrulanamadi; VERIFIED degil."
@@ -426,13 +429,14 @@
         }
       },
       "testOracle": {
-        "status": "MISSING",
-        "ids": []
+        "status": "VERIFIED",
+        "ids": [
+          "TBP-263"
+        ]
       },
       "readiness": "BLOCKED",
       "humanApproval": false,
       "blockers": [
-        "Test oracle ID'si yok (testOracle MISSING).",
         "Required state Figma node'lari dogrulanamadi (Figma View kotasi doldu); 6 state UNVERIFIED.",
         "Insan onayi yok (humanApproval=false)."
       ]
@@ -527,13 +531,14 @@
         }
       },
       "testOracle": {
-        "status": "MISSING",
-        "ids": []
+        "status": "VERIFIED",
+        "ids": [
+          "TBP-262"
+        ]
       },
       "readiness": "BLOCKED",
       "humanApproval": false,
       "blockers": [
-        "Test oracle ID'si yok (testOracle MISSING).",
         "Required state Figma node'lari dogrulanamadi (Figma View kotasi doldu); 6 state UNVERIFIED.",
         "Insan onayi yok (humanApproval=false)."
       ]
@@ -608,13 +613,14 @@
         }
       },
       "testOracle": {
-        "status": "MISSING",
-        "ids": []
+        "status": "VERIFIED",
+        "ids": [
+          "TBP-264"
+        ]
       },
       "readiness": "BLOCKED",
       "humanApproval": false,
       "blockers": [
-        "Test oracle ID'si yok (testOracle MISSING).",
         "Required state Figma node'lari dogrulanamadi (Figma View kotasi doldu); 6 state UNVERIFIED.",
         "Insan onayi yok (humanApproval=false).",
         "Bu platform-akis icin Figma node kaniti yok."
@@ -694,13 +700,14 @@
         }
       },
       "testOracle": {
-        "status": "MISSING",
-        "ids": []
+        "status": "VERIFIED",
+        "ids": [
+          "TBP-260"
+        ]
       },
       "readiness": "BLOCKED",
       "humanApproval": false,
       "blockers": [
-        "Test oracle ID'si yok (testOracle MISSING).",
         "Required state Figma node'lari dogrulanamadi (Figma View kotasi doldu); 6 state UNVERIFIED.",
         "Insan onayi yok (humanApproval=false).",
         "Bu platform-akis icin Figma node kaniti yok.",
@@ -797,13 +804,14 @@
         }
       },
       "testOracle": {
-        "status": "MISSING",
-        "ids": []
+        "status": "VERIFIED",
+        "ids": [
+          "TBP-261"
+        ]
       },
       "readiness": "BLOCKED",
       "humanApproval": false,
       "blockers": [
-        "Test oracle ID'si yok (testOracle MISSING).",
         "Required state Figma node'lari dogrulanamadi (Figma View kotasi doldu); 6 state UNVERIFIED.",
         "Insan onayi yok (humanApproval=false).",
         "Aday Figma node'lari bu turde dogrulanamadi; VERIFIED degil.",
@@ -889,13 +897,14 @@
         }
       },
       "testOracle": {
-        "status": "MISSING",
-        "ids": []
+        "status": "VERIFIED",
+        "ids": [
+          "TBP-261"
+        ]
       },
       "readiness": "BLOCKED",
       "humanApproval": false,
       "blockers": [
-        "Test oracle ID'si yok (testOracle MISSING).",
         "Required state Figma node'lari dogrulanamadi (Figma View kotasi doldu); 6 state UNVERIFIED.",
         "Insan onayi yok (humanApproval=false).",
         "Bu platform-akis icin Figma node kaniti yok.",
@@ -978,13 +987,14 @@
         }
       },
       "testOracle": {
-        "status": "MISSING",
-        "ids": []
+        "status": "VERIFIED",
+        "ids": [
+          "TBP-263"
+        ]
       },
       "readiness": "BLOCKED",
       "humanApproval": false,
       "blockers": [
-        "Test oracle ID'si yok (testOracle MISSING).",
         "Required state Figma node'lari dogrulanamadi (Figma View kotasi doldu); 6 state UNVERIFIED.",
         "Insan onayi yok (humanApproval=false).",
         "Bu platform-akis icin Figma node kaniti yok.",
@@ -1070,13 +1080,14 @@
         }
       },
       "testOracle": {
-        "status": "MISSING",
-        "ids": []
+        "status": "VERIFIED",
+        "ids": [
+          "TBP-262"
+        ]
       },
       "readiness": "BLOCKED",
       "humanApproval": false,
       "blockers": [
-        "Test oracle ID'si yok (testOracle MISSING).",
         "Required state Figma node'lari dogrulanamadi (Figma View kotasi doldu); 6 state UNVERIFIED.",
         "Insan onayi yok (humanApproval=false).",
         "Bu platform-akis icin Figma node kaniti yok.",
@@ -1153,17 +1164,67 @@
         }
       },
       "testOracle": {
-        "status": "MISSING",
-        "ids": []
+        "status": "VERIFIED",
+        "ids": [
+          "TBP-264"
+        ]
       },
       "readiness": "BLOCKED",
       "humanApproval": false,
       "blockers": [
-        "Test oracle ID'si yok (testOracle MISSING).",
         "Required state Figma node'lari dogrulanamadi (Figma View kotasi doldu); 6 state UNVERIFIED.",
         "Insan onayi yok (humanApproval=false).",
         "Bu platform-akis icin Figma node kaniti yok.",
         "R0.1 Android sadece online; offline sync/conflict R0.3."
+      ]
+    }
+  ],
+  "testOracles": [
+    {
+      "id": "TBP-260",
+      "pilotJira": "TBP-249",
+      "executionJira": "TBP-258",
+      "rows": [
+        "windows-login",
+        "android-login"
+      ]
+    },
+    {
+      "id": "TBP-261",
+      "pilotJira": "TBP-250",
+      "executionJira": "TBP-258",
+      "rows": [
+        "windows-musteri",
+        "android-musteri",
+        "windows-urunFiyat",
+        "android-urunFiyat"
+      ]
+    },
+    {
+      "id": "TBP-262",
+      "pilotJira": "TBP-251",
+      "executionJira": "TBP-258",
+      "rows": [
+        "windows-stok",
+        "android-stok"
+      ]
+    },
+    {
+      "id": "TBP-263",
+      "pilotJira": "TBP-252",
+      "executionJira": "TBP-258",
+      "rows": [
+        "windows-satis",
+        "android-satis"
+      ]
+    },
+    {
+      "id": "TBP-264",
+      "pilotJira": "TBP-253",
+      "executionJira": "TBP-258",
+      "rows": [
+        "windows-kasaOzeti",
+        "android-kasaOzeti"
       ]
     }
   ],

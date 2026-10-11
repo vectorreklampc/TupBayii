@@ -21,7 +21,10 @@ const beklenenOperasyonlar = {
   'kasa-daily-summary': 'getDailyCashSummary', 'kasa-opening': 'openCashDay',
   'kasa-day-end-count': 'submitDayEndCount'
 };
-const idempotentOperasyonlar = ['createStockCorrection', 'completeSale', 'cancelSale', 'openCashDay', 'submitDayEndCount'];
+const beklenenOracle = {
+  login: 'TBP-260', musteri: 'TBP-261', urunFiyat: 'TBP-261', stok: 'TBP-262', satis: 'TBP-263', kasaOzeti: 'TBP-264'
+};
+const idempotentOperasyonlar =['createStockCorrection', 'completeSale', 'cancelSale', 'openCashDay', 'submitDayEndCount'];
 const listeOperasyonlari = ['searchCustomersByPhone', 'listProducts', 'listStock', 'listStockMovements'];
 
 function operasyonBul(belge, kimlik) {
@@ -45,7 +48,6 @@ function hazirSatir() {
   satir.readiness = 'READY';
   satir.humanApproval = true;
   satir.blockers = [];
-  satir.testOracle = { status: 'VERIFIED', ids: ['TBP-900'] };
   satir.figma.nodes = [{ id: '1:1', name: 'Login', status: 'VERIFIED' }];
   for (const durum of durumlar) satir.states[durum] = { status: 'VERIFIED', figmaNode: '1:1' };
   return { matris, satir };
@@ -217,13 +219,16 @@ test('girdi ve cikti semalari ayrik ve tipli', () => {
   }, /girdi/);
 });
 
-test('cozulen OpenAPI blocker kaldirildi; Figma/testOracle/insan onayi eksigi BLOCKED tutar', () => {
+test('cozulen OpenAPI ve testOracle blocker kaldirildi; Figma/state/insan onayi eksigi BLOCKED tutar', () => {
   for (const satir of kopya().rows) {
     assert.equal(satir.readiness, 'BLOCKED', satir.id);
     assert.equal(satir.humanApproval, false, satir.id);
-    assert.equal(satir.testOracle.status, 'MISSING', satir.id);
+    assert.equal(satir.testOracle.status, 'VERIFIED', satir.id);
+    assert.deepEqual(satir.testOracle.ids, [beklenenOracle[satir.flow]], satir.id);
     assert.ok(satir.blockers.every((b) => !/paths bos|securitySchemes yok|Jira api davranislari yerel olarak kopyalanmadi/.test(b)), satir.id);
-    assert.ok(satir.blockers.some((b) => /testOracle/.test(b)), satir.id);
+    assert.ok(satir.blockers.every((b) => !/testOracle|Test oracle/.test(b)), satir.id);
+    assert.ok(satir.blockers.some((b) => /Figma View kotasi/.test(b)), satir.id);
+    assert.ok(durumlar.every((d) => satir.states[d].status === 'UNVERIFIED' && satir.states[d].figmaNode === null), satir.id);
     assert.ok(satir.blockers.some((b) => /humanApproval/.test(b)), satir.id);
     assert.ok(satir.openapi.operationIds.length > 0 && satir.openapi.schemas.length > 0, satir.id);
   }
@@ -247,6 +252,50 @@ test('requirements Jira kimligi, testOracle durust eksik olmali', () => {
   reddeder((m) => { m.rows[0].testOracle = { status: 'VERIFIED', ids: [] }; }, /testOracle/);
   reddeder((m) => { m.rows[0].testOracle = { status: 'MISSING', ids: ['TBP-1'] }; }, /testOracle/);
   reddeder((m) => { m.rows[0].testOracle = { status: 'VERIFIED', ids: ['x'] }; }, /testOracle/);
+  reddeder((m) => { m.rows[0].testOracle = { status: 'MISSING', ids: [] }; }, /testOracle ids yalniz/);
+});
+
+const oracle = (m, id) => m.testOracles.find((o) => o.id === id);
+
+test('testOracles katalogu: her oracle bilinen, tekil, dogru satirlari kapsar; kosu kaniti TBP-258', () => {
+  const { testOracles } = kopya();
+  assert.deepEqual(testOracles.map((o) => [o.id, o.pilotJira, o.executionJira]), [
+    ['TBP-260', 'TBP-249', 'TBP-258'], ['TBP-261', 'TBP-250', 'TBP-258'], ['TBP-262', 'TBP-251', 'TBP-258'],
+    ['TBP-263', 'TBP-252', 'TBP-258'], ['TBP-264', 'TBP-253', 'TBP-258']
+  ]);
+  assert.equal(testOracles.flatMap((o) => o.rows).length, 12);
+  // katalog bicimi
+  reddeder((m) => { delete m.testOracles; }, /testOracles katalogu/);
+  reddeder((m) => { m.testOracles = []; }, /testOracles katalogu/);
+  reddeder((m) => { oracle(m, 'TBP-261').id = 'TBP-260'; }, /tekil/);
+  reddeder((m) => { oracle(m, 'TBP-260').id = 'oracle-1'; }, /tekil/);
+  reddeder((m) => { oracle(m, 'TBP-260').rows = []; }, /rows/);
+  // bilinmeyen oracle ID
+  reddeder((m) => { m.rows[0].testOracle.ids = ['TBP-999']; }, /katalogunda bulunmali/);
+  // yanlis satir kapsami
+  reddeder((m) => { oracle(m, 'TBP-260').rows.push('ios-login'); }, /bilinmeyen satir/);
+  reddeder((m) => { oracle(m, 'TBP-260').rows.push('windows-musteri'); }, /birden fazla/);
+  reddeder((m) => { oracle(m, 'TBP-260').rows = ['android-login']; }, /windows-login: testOracle ids yalniz/);
+  reddeder((m) => { m.rows[0].testOracle.ids = ['TBP-261']; }, /windows-login: testOracle ids yalniz/);
+  reddeder((m) => { m.rows[0].testOracle.ids = ['TBP-260', 'TBP-261']; }, /testOracle ids yalniz/);
+  reddeder((m) => { m.rows[0].id = 'windows-giris'; }, /platform-flow/);
+  // yanlis pilotJira sahipligi
+  reddeder((m) => { oracle(m, 'TBP-260').pilotJira = 'TBP-250'; }, /TBP-260 pilotJira/);
+  reddeder((m) => { oracle(m, 'TBP-260').pilotJira = 'x'; }, /pilotJira gecerli/);
+  // yanlis kosu (execution) Jira
+  reddeder((m) => { oracle(m, 'TBP-262').executionJira = 'TBP-257'; }, /executionJira TBP-258/);
+  reddeder((m) => { delete oracle(m, 'TBP-262').executionJira; }, /executionJira TBP-258/);
+});
+
+test('kapsanmayan satir durustce MISSING kalabilir ama READY olamaz', () => {
+  const m = kopya();
+  oracle(m, 'TBP-260').rows = ['android-login'];
+  m.rows[0].testOracle = { status: 'MISSING', ids: [] };
+  assert.equal(pilotMatrisDogrula(m, openapi), true);
+  const { matris, satir } = hazirSatir();
+  oracle(matris, 'TBP-260').rows = ['android-login'];
+  satir.testOracle = { status: 'MISSING', ids: [] };
+  assert.throws(() => pilotMatrisDogrula(matris, openapi), /READY icin testOracle/);
 });
 
 test('apiBehaviors katalogu tutarli', () => {
