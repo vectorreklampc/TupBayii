@@ -758,11 +758,23 @@
       },
       "GunlukKasaOzeti": {
         "type": "object",
-        "required": ["tarih", "nakitToplami", "cariToplami"],
+        "description": "Kasa gununun sunucu projection'indan okunan authoritative ozeti; tum tutarlar sunucuda hesaplanir, client hesaplamaz ve yalniz gosterir. Senaryo: kasa acilisi acilisTutari'ni, gun icindeki satislar nakitToplami/cariToplami'ni belirler; gun sonu sayimi kaydedilene kadar sayilanNakitTutari ve sayimFarki null doner, sayimdan sonra dolu doner.",
+        "required": ["tarih", "nakitToplami", "cariToplami", "satisToplami", "acilisTutari", "beklenenKasaTutari", "sayilanNakitTutari", "sayimFarki"],
         "properties": {
           "tarih": { "type": "string", "format": "date" },
-          "nakitToplami": { "$ref": "#/components/schemas/ParaTutari" },
-          "cariToplami": { "$ref": "#/components/schemas/ParaTutari" }
+          "nakitToplami": { "$ref": "#/components/schemas/ParaTutari", "description": "Gunun nakit satislarinin NET toplami; iptal edilen satisin atomik ters kaydi dusulur." },
+          "cariToplami": { "$ref": "#/components/schemas/ParaTutari", "description": "Gunun cari satislarinin NET toplami; iptal edilen satisin atomik ters kaydi dusulur." },
+          "satisToplami": { "$ref": "#/components/schemas/ParaTutari", "description": "Gunluk satis toplami; nakitToplami + cariToplami." },
+          "acilisTutari": { "$ref": "#/components/schemas/ParaTutari", "description": "Kasa acilisinda kaydedilen tutar." },
+          "beklenenKasaTutari": { "$ref": "#/components/schemas/ParaTutari", "description": "Kasada olmasi gereken nakit; acilisTutari + nakitToplami. Cari satis kasaya nakit girisi yapmaz." },
+          "sayilanNakitTutari": {
+            "oneOf": [{ "$ref": "#/components/schemas/ParaTutari" }, { "type": "null" }],
+            "description": "Gun sonu sayiminda kaydedilen nakit; sayim kaydedilmeden once null."
+          },
+          "sayimFarki": {
+            "oneOf": [{ "$ref": "#/components/schemas/ParaTutari" }, { "type": "null" }],
+            "description": "sayilanNakitTutari - beklenenKasaTutari; negatif kasa eksigi, pozitif kasa fazlasidir. Sayim kaydedilmeden once null."
+          }
         }
       }
     },

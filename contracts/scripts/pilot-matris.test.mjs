@@ -242,6 +242,36 @@ test('liste uclari sayfali, tekil uclar tipli schema dondurur', () => {
   }, /schema/);
 });
 
+test('gunluk kasa ozeti satis, nakit/cari, beklenen kasa ve sayim farkini authoritative dondurur', () => {
+  const para = { $ref: '#/components/schemas/ParaTutari' };
+  const bosOlabilirPara = { oneOf: [para, { type: 'null' }] };
+  const ozet = openapi.components.schemas.GunlukKasaOzeti;
+  assert.deepEqual(ozet.required, ['tarih', 'nakitToplami', 'cariToplami', 'satisToplami', 'acilisTutari',
+    'beklenenKasaTutari', 'sayilanNakitTutari', 'sayimFarki']);
+  assert.deepEqual(ozet.properties.tarih, { type: 'string', format: 'date' });
+  for (const alan of ['nakitToplami', 'cariToplami', 'satisToplami', 'acilisTutari', 'beklenenKasaTutari']) {
+    assert.deepEqual({ ...ozet.properties[alan], description: undefined }, { ...para, description: undefined }, alan);
+  }
+  for (const alan of ['sayilanNakitTutari', 'sayimFarki']) {
+    assert.deepEqual({ ...ozet.properties[alan], description: undefined }, { ...bosOlabilirPara, description: undefined }, alan);
+  }
+  // Client hesap yapmaz; formul ve sayim oncesi null semantigi contract'ta acik olmali.
+  assert.match(ozet.properties.satisToplami.description, /nakitToplami \+ cariToplami/);
+  assert.match(ozet.properties.beklenenKasaTutari.description, /acilisTutari \+ nakitToplami/);
+  assert.match(ozet.properties.sayilanNakitTutari.description, /sayim.*once.*null/i);
+  assert.match(ozet.properties.sayimFarki.description, /sayilanNakitTutari - beklenenKasaTutari/);
+  assert.match(ozet.description, /client hesaplamaz/i);
+  // Iptal, atomik ters kayitla toplamlardan ve dolayisiyla beklenen kasadan NET dusulur.
+  for (const alan of ['nakitToplami', 'cariToplami']) {
+    assert.match(ozet.properties[alan].description, /NET.*iptal.*ters kayd?i.*dusulur/i, alan);
+  }
+  // 404 response'u korunur; acilmamis gun icin yeni davranis karari getirilmez.
+  const { islem } = operasyonBul(openapi, 'getDailyCashSummary');
+  assert.equal(islem.responses['404'].$ref, '#/components/responses/Hata');
+  assert.doesNotMatch(islem.description, /acilmamis/i);
+  assert.equal(pilotMatrisDogrula(kopya(), openapi), true);
+});
+
 test('girdi ve cikti semalari ayrik ve tipli', () => {
   apiReddeder((api) => {
     operasyonBul(api, 'updateCustomer').islem.responses['200'].content['application/json'].schema =
