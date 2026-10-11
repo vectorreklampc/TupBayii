@@ -38,10 +38,10 @@ const beklenenNodlar = {
   'android-urunFiyat': ['34:2', '32:37'],
   'android-satis': ['32:37', '32:92', '32:141', '61:35'],
   'android-stok': ['34:64'],
-  'android-kasaOzeti': []
+  'android-kasaOzeti': ['221:90', '221:125', '221:153', '221:179']
 };
-// Android Kasa Ozeti icin tasarim/handoff yok; 32:141 (odeme) ve 61:35 (satis sonrasi kasa hareketi) Satis kanitidir.
-const blokeliKasa = 'android-kasaOzeti';
+// Android Kasa Ozeti node'lari Mobil Kabuk 1:19 altinda; 32:141 (odeme) ve 61:35 (satis sonrasi kasa hareketi) Satis kanitidir, kasa kaniti degil.
+const androidKasa = 'android-kasaOzeti';
 // READY satirlarin Figma node'lari tarayicida dogrulanan kanitla birebir eslesmeli.
 const figmaKanitiDogrula = (matris) => {
   for (const satir of matris.rows.filter((s) => s.readiness === 'READY')) {
@@ -89,7 +89,7 @@ function blokeliYap(satir, readiness = 'BLOCKED') {
   satir.blockers = ['Insan onayi yok (humanApproval=false).'];
 }
 
-test('mevcut matris (11 READY + 1 BLOCKED) dogrulanir', () => {
+test('mevcut matris (12 READY) dogrulanir', () => {
   assert.equal(pilotMatrisDogrula(kopya(), openapi), true);
 });
 
@@ -282,12 +282,11 @@ test('girdi ve cikti semalari ayrik ve tipli', () => {
   }, /girdi/);
 });
 
-test('11 satir READY: OpenAPI, testOracle, Figma node/state kaniti ve insan onayi tam', () => {
+test('12 satir READY: OpenAPI, testOracle, Figma node/state kaniti ve insan onayi tam', () => {
   const { rows } = kopya();
   const hazir = rows.filter((s) => s.readiness === 'READY');
-  assert.equal(hazir.length, 11);
+  assert.equal(hazir.length, 12);
   figmaKanitiDogrula({ rows });
-  assert.deepEqual(rows.filter((s) => s.readiness !== 'READY').map((s) => s.id), [blokeliKasa]);
   for (const satir of hazir) {
     assert.equal(satir.humanApproval, true, satir.id);
     assert.deepEqual(satir.blockers, [], satir.id);
@@ -306,26 +305,19 @@ test('gercek satirda kanit eksilirse sahte READY reddedilir', () => {
   reddeder((m) => { m.rows[10].blockers = ['acik']; }, /READY satir blocker/);
 });
 
-test("android-kasaOzeti BLOCKED: tasarim/handoff ve insan onayi eksik, odeme node'lari kasa kaniti degil", () => {
-  const satir = kopya().rows.find((s) => s.id === blokeliKasa);
-  assert.equal(satir.readiness, 'BLOCKED');
-  assert.equal(satir.humanApproval, false);
-  assert.deepEqual(satir.figma.nodes, []);
+test("android-kasaOzeti onayli READY: dort kasa node'u VERIFIED, blocker yok, odeme node'lari kasa kaniti degil", () => {
+  const satir = kopya().rows.find((s) => s.id === androidKasa);
+  assert.equal(satir.readiness, 'READY');
+  assert.equal(satir.humanApproval, true);
+  assert.deepEqual(satir.blockers, []);
+  assert.deepEqual(satir.figma.nodes.map((n) => n.id), beklenenNodlar[androidKasa]);
+  assert.ok(satir.figma.nodes.every((n) => n.status === 'VERIFIED'));
+  assert.ok(!satir.figma.nodes.some((n) => ['32:141', '61:35'].includes(n.id)));
   assert.ok(durumlar.every((d) => satir.states[d].status === 'VERIFIED' && satir.states[d].figmaNode === durumPanosu));
-  for (const desen of [/gunluk kasa ozeti/, /kasa acilisi/, /gun sonu/, /Insan onayi/]) {
-    assert.ok(satir.blockers.some((b) => desen.test(b)), `blocker yok: ${desen}`);
-  }
 });
 
-test('android-kasaOzeti node olmadan READY yapilamaz', () => {
-  const m = kopya();
-  const s = m.rows.find((r) => r.id === blokeliKasa);
-  assert.deepEqual(s.figma.nodes, []);
-  assert.ok(!s.figma.nodes.some((n) => ['32:141', '61:35'].includes(n.id)));
-  s.readiness = 'READY';
-  s.humanApproval = true;
-  s.blockers = [];
-  assert.throws(() => pilotMatrisDogrula(m, openapi), /READY icin tum Figma/);
+test('android-kasaOzeti insan onayi kaldirilirsa READY reddedilir', () => {
+  reddeder((m) => { m.rows.find((r) => r.id === androidKasa).humanApproval = false; }, /READY icin humanApproval/);
 });
 
 test('requirements pilotJira ve platformJira icermeli', () => {

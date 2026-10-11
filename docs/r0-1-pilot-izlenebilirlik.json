@@ -1144,7 +1144,28 @@
       },
       "figma": {
         "file": "unveOhyF2AlrBYA34ez6x6",
-        "nodes": []
+        "nodes": [
+          {
+            "id": "221:90",
+            "name": "Mobil / Kasa Günlük Özet — R0.1",
+            "status": "VERIFIED"
+          },
+          {
+            "id": "221:125",
+            "name": "Mobil / Kasa Açılışı — R0.1",
+            "status": "VERIFIED"
+          },
+          {
+            "id": "221:153",
+            "name": "Mobil / Gün Sonu Sayımı — R0.1",
+            "status": "VERIFIED"
+          },
+          {
+            "id": "221:179",
+            "name": "Mobil / Gün Sonu Sayım Farkı — R0.1",
+            "status": "VERIFIED"
+          }
+        ]
       },
       "states": {
         "loading": {
@@ -1178,14 +1199,9 @@
           "TBP-264"
         ]
       },
-      "readiness": "BLOCKED",
-      "humanApproval": false,
-      "blockers": [
-        "Android gunluk kasa ozeti ekrani icin Figma tasarim/handoff node'u yok (32:141 odeme, 61:35 satis sonrasi kasa hareketi ozeti; kasa ozeti kaniti degil).",
-        "Android kasa acilisi ekrani icin Figma tasarim/handoff node'u yok.",
-        "Android gun sonu sayimi ekrani icin Figma tasarim/handoff node'u yok.",
-        "Insan onayi yok (humanApproval=false)."
-      ]
+      "readiness": "READY",
+      "humanApproval": true,
+      "blockers": []
     }
   ],
   "testOracles": [

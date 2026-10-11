@@ -31,7 +31,7 @@ Kök `testOracles` kataloğu her test oracle Jira'sını `pilotJira` (sorumlu ka
 
 ## Kanıt durumu
 
-Kayıtlı tüm Figma node'ları ve state'ler `VERIFIED`; kanıtlar tarayıcıda Figma dosyası üzerinden doğrulandı. Figma MCP kotası tarayıcıyla doğrulamayı engellemedi, AI kredisi harcanmadı ve yeni tasarım üretilmedi; mevcut tasarımlar yeniden kullanıldı.
+Kayıtlı tüm Figma node'ları ve state'ler `VERIFIED`. Diğer 11 satırın kanıtları tarayıcıda Figma dosyası üzerinden doğrulandı. Android Kasa Özeti için Codex, canlı dosyada Mobil Kabuk sayfası `1:19` altında yeni düzenlenebilir ekranlar oluşturup görsel/yapısal geri okudu (390x844, Inter, lokal component instance, raster yok).
 
 | Satır | Windows node'ları | Android node'ları |
 |---|---|---|
@@ -40,11 +40,11 @@ Kayıtlı tüm Figma node'ları ve state'ler `VERIFIED`; kanıtlar tarayıcıda 
 | Ürün/Fiyat | fiyat/depozito `41:246` | müşteri/sipariş girişi ve son satış fiyatı `34:2`, ürün/adet görev kartları `32:37` |
 | Satış | POS ana `4:2`, ödeme/tamamlama `7:609`, yetersiz stok `8:169`, kredi limiti `8:211` | `32:37`, `32:92`, ödeme `32:141`, kasa hareketi özeti `61:35` |
 | Stok | stok ana `7:390`, sayım farkı `8:87` | mobil stok `34:64` |
-| Kasa Özeti | kasa özeti `31:166` | — (tasarım/handoff yok) |
+| Kasa Özeti | kasa özeti `31:166` | günlük özet `221:90`, kasa açılışı `221:125`, gün sonu sayımı `221:153`, sayım farkı `221:179` |
 
 6 zorunlu state (`loading`, `empty`, `validation`, `permission`, `networkError`, `success`) her satırda ortak POS durum/tamlık panosu `42:84` ile `VERIFIED`. OpenAPI ve test oracle kanıtları tamam.
 
-**11 satır `READY`** (`humanApproval: true`, `blockers` boş). **`android-kasaOzeti` `BLOCKED`**: `figma.nodes` boş, `humanApproval: false`. Ödeme `32:141` ve satış sonrası kasa hareketi özeti `61:35` Satış akışının kanıtıdır; günlük kasa özeti, kasa açılışı ve gün sonu sayımı ekranlarını göstermez, bu yüzden Kasa Özeti kanıtı sayılmaz. Blocker'lar: Android günlük kasa özeti, kasa açılışı ve gün sonu sayımı için Figma tasarım/handoff node'u yok; insan onayı yok.
+**12/12 satır `READY`** (`humanApproval: true`, `blockers` boş). `android-kasaOzeti`: dört Figma node'u `VERIFIED`; ekranlar TBP-253/TBP-264 kapsamında ledger'dan günlük satış, nakit, cari, beklenen kasa, yetkili açılış/sayım ve farkı gösterir, Android yalnız online. Ödeme `32:141` ve satış sonrası kasa hareketi özeti `61:35` Satış akışının kanıtıdır, Kasa Özeti kanıtı sayılmaz. İnsan onayı, Codex'in canlı Jira TBP-248 ve yorumlarını okuyup dört kasa node'unu doğrulamasının ardından verildi.
 
 ## Kapsam dışı ve release yolu
 
