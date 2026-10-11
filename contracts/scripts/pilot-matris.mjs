@@ -16,17 +16,116 @@ function dogrula(kosul, mesaj) {
   if (!kosul) throw new Error(mesaj);
 }
 
-function operasyonKimlikleri(openapi) {
-  return new Set(Object.values(openapi.paths ?? {}).flatMap((ogeler) =>
-    Object.values(ogeler).map((islem) => islem?.operationId).filter(Boolean)));
+const httpMetotlari = new Set(['get', 'post', 'put', 'patch', 'delete']);
+
+function operasyonlar(openapi) {
+  const harita = new Map();
+  for (const [yol, ogeler] of Object.entries(openapi.paths ?? {})) {
+    for (const [metot, islem] of Object.entries(ogeler)) {
+      if (!httpMetotlari.has(metot) || !islem?.operationId) continue;
+      harita.set(islem.operationId, { yol, metot, islem, parametreler: [...(ogeler.parameters ?? []), ...(islem.parameters ?? [])] });
+    }
+  }
+  return harita;
 }
 
 const readinessDegerleri = ['BLOCKED', 'SPEC_REQUIRED', 'HUMAN_REQUIRED', 'READY'];
 const stateDurumlari = ['UNVERIFIED', 'CANDIDATE', 'VERIFIED'];
 const figmaDurumlari = ['CANDIDATE', 'VERIFIED'];
 const figmaNodeDeseni = /^\d+:\d+$/;
+const semaOneki = '#/components/schemas/';
+// TBP-249: yalniz oturum acma kimliksizdir; digerleri bearer ister.
+const anonimDavranislar = new Set(['login-open']);
+// TBP-251/252/253: stok ve finans yazmalari idempotent olmali.
+const idempotentJira = new Set(['TBP-251', 'TBP-252', 'TBP-253']);
+const idempotencyKodlari = ['IDEMPOTENCY_CONFLICT', 'IDEMPOTENCY_IN_PROGRESS'];
+const hataKoduDeseni = /^[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)*$/;
+const yasakGirdi = /tenant|connection.?string|secret/i;
+// Turkce cogul kaynak: -ler/-lar, tamlamada -leri/-lari.
+const cogulKaynak = /^\/api\/v1\/[a-z0-9-]*(?:ler|lar|leri|lari)(?:\/|$)/;
 
-function davranisDogrula(matris, kimlikler, semalar) {
+function refCoz(openapi, ref) {
+  return ref.slice(2).split('/').reduce((dugum, anahtar) => dugum?.[anahtar], openapi);
+}
+
+// $ref kapanisi boyunca ulasilan component schema adlarini ve property adlarini toplar.
+function kapanis(dugum, openapi, sonuc = { semalar: new Set(), ozellikler: new Set() }, gorulen = new Set()) {
+  if (!dugum || typeof dugum !== 'object') return sonuc;
+  if (typeof dugum.$ref === 'string' && !gorulen.has(dugum.$ref)) {
+    gorulen.add(dugum.$ref);
+    if (dugum.$ref.startsWith(semaOneki)) sonuc.semalar.add(dugum.$ref.slice(semaOneki.length));
+    kapanis(refCoz(openapi, dugum.$ref), openapi, sonuc, gorulen);
+  }
+  if (dugum.properties && typeof dugum.properties === 'object' && !Array.isArray(dugum.properties)) {
+    for (const ad of Object.keys(dugum.properties)) sonuc.ozellikler.add(ad);
+  }
+  for (const [anahtar, deger] of Object.entries(dugum)) if (anahtar !== '$ref') kapanis(deger, openapi, sonuc, gorulen);
+  return sonuc;
+}
+
+const refAdi = (sema) => typeof sema?.$ref === 'string' && sema.$ref.startsWith(semaOneki)
+  ? sema.$ref.slice(semaOneki.length) : null;
+
+function basariSemasi(islem) {
+  const [, yanit] = Object.entries(islem.responses ?? {}).find(([kod]) => /^2\d\d$/.test(kod)) ?? [];
+  return yanit?.content?.['application/json']?.schema;
+}
+
+// Operasyonun tipli girdi ve cikti schema adlari; tipsizse hata.
+function tipliUclar(op) {
+  const { metot, islem } = op;
+  const yer = `${metot.toUpperCase()} ${op.yol}`;
+  const govde = islem.requestBody?.content?.['application/json']?.schema;
+  const girdi = govde === undefined ? null : refAdi(govde);
+  dogrula(govde === undefined ? !['post', 'put', 'patch'].includes(metot) : girdi !== null,
+    `${yer}: girdi govdesi component schema $ref olmali`);
+  const basari = basariSemasi(islem);
+  const cikti = islem['x-collection'] === true ? refAdi(basari?.properties?.data?.items) : refAdi(basari);
+  if (metot === 'get' && islem['x-collection'] !== true) {
+    dogrula(!(basari?.type === 'array' || basari?.properties?.data?.type === 'array'),
+      `${yer}: liste donen uc sayfali koleksiyon (x-collection) olmali`);
+  }
+  dogrula(cikti !== null, `${yer}: basari cevabi tipli component schema olmali`);
+  return { girdi, cikti };
+}
+
+function operasyonDogrula(op, bagliDavranislar, openapi) {
+  const { yol, metot, islem, parametreler } = op;
+  const yer = `${metot.toUpperCase()} ${yol}`;
+  dogrula(yol.startsWith('/api/v1/'), `${yer}: pilot operasyonu /api/v1 altinda olmali`);
+  dogrula(cogulKaynak.test(yol), `${yer}: kaynak adi cogul olmali`);
+  const semalar = openapi.components?.securitySchemes ?? {};
+  const bearerMi = (ad) => semalar[ad]?.type === 'http' && semalar[ad]?.scheme?.toLowerCase() === 'bearer';
+  const anonim = bagliDavranislar.every((d) => anonimDavranislar.has(d.id));
+  if (!anonim || islem.security?.length !== 0) {
+    dogrula(Array.isArray(islem.security) && islem.security.length > 0 &&
+      islem.security.every((g) => Object.keys(g).length > 0 && Object.keys(g).every(bearerMi)),
+    `${yer}: login disi operasyon bearer security gerektirir`);
+  }
+  const cozulmus = parametreler.map((p) => typeof p?.$ref === 'string' ? refCoz(openapi, p.$ref) : p);
+  const girdiAdlari = [...cozulmus.map((p) => p?.name ?? ''),
+    ...kapanis(islem.requestBody, openapi).ozellikler];
+  dogrula(girdiAdlari.every((ad) => !yasakGirdi.test(ad)),
+    `${yer}: client tenant, connection string veya secret gonderemez`);
+  const kodlar = islem['x-error-codes'] ?? {};
+  dogrula(typeof kodlar === 'object' && !Array.isArray(kodlar) && Object.entries(kodlar).every(([durum, liste]) =>
+    /^[45]\d\d$/.test(durum) && islem.responses?.[durum]?.$ref === '#/components/responses/Hata' &&
+    Array.isArray(liste) && liste.length > 0 && liste.every((k) => hataKoduDeseni.test(k))),
+  `${yer}: x-error-codes yalniz tanimli Hata response'larina UPPER_SNAKE_CASE kod listesi baglar`);
+  const yazma = metot !== 'get';
+  if (yazma && bagliDavranislar.some((d) => idempotentJira.has(d.sourceJira))) {
+    dogrula(islem['x-idempotency-required'] === true &&
+      cozulmus.some((p) => p?.name === 'Idempotency-Key' && p.in === 'header' && p.required === true),
+    `${yer}: stok/finans yazmasi Idempotency-Key gerektirir`);
+  }
+  if (islem['x-idempotency-required'] === true) {
+    dogrula(idempotencyKodlari.every((k) => kodlar['409']?.includes(k)),
+      `${yer}: 409 x-error-codes ${idempotencyKodlari.join(' ve ')} icermeli`);
+  }
+  return tipliUclar(op);
+}
+
+function davranisDogrula(matris, ops, semalar, openapi) {
   const davranislar = matris.apiBehaviors;
   dogrula(Array.isArray(davranislar) && davranislar.length > 0, 'apiBehaviors katalogu dolu olmali');
   const idler = new Set();
@@ -34,10 +133,27 @@ function davranisDogrula(matris, kimlikler, semalar) {
     dogrula(typeof d.id === 'string' && d.id && !idler.has(d.id), `apiBehavior id tekil olmali: ${d.id}`);
     idler.add(d.id);
     dogrula(jiraDeseni.test(d.sourceJira), `apiBehavior ${d.id}: sourceJira gecerli TBP anahtari olmali`);
-    dogrula(d.operationId === null || kimlikler.has(d.operationId), `apiBehavior ${d.id}: OpenAPI'de olmayan operationId`);
-    dogrula(Array.isArray(d.schemas) && d.schemas.every((ad) => Object.hasOwn(semalar, ad)),
-      `apiBehavior ${d.id}: schemas dizi olmali ve OpenAPI'de bulunmali`);
+    dogrula(typeof d.operationId === 'string' && ops.has(d.operationId),
+      `apiBehavior ${d.id}: OpenAPI'de bulunan operationId gerekli`);
+    dogrula(Array.isArray(d.schemas) && d.schemas.length > 0 && d.schemas.every((ad) => Object.hasOwn(semalar, ad)),
+      `apiBehavior ${d.id}: schemas dolu olmali ve OpenAPI'de bulunmali`);
   }
+  const girdiler = new Set();
+  const ciktilar = new Set();
+  for (const [kimlik, op] of ops) {
+    const bagli = davranislar.filter((d) => d.operationId === kimlik);
+    if (bagli.length === 0) continue;
+    const { girdi, cikti } = operasyonDogrula(op, bagli, openapi);
+    if (girdi) girdiler.add(girdi);
+    ciktilar.add(cikti);
+    const kullanilan = kapanis(op.islem, openapi).semalar;
+    for (const d of bagli) {
+      dogrula(d.schemas.every((ad) => kullanilan.has(ad)) && [girdi, cikti].every((ad) => !ad || d.schemas.includes(ad)),
+        `apiBehavior ${d.id}: schemas ${kimlik} operasyonunda kullanilmali ve girdi/cikti schema'sini icermeli`);
+    }
+  }
+  const ortak = [...girdiler].filter((ad) => ciktilar.has(ad));
+  dogrula(ortak.length === 0, `girdi ve cikti schema'lari ayrik olmali: ${ortak.join(', ')}`);
   return new Map(davranislar.map((d) => [d.id, d]));
 }
 
@@ -79,6 +195,13 @@ function satirDogrula(satir, matris, davranislar, kimlikler, semalar) {
   dogrula(Array.isArray(operationIds) && Array.isArray(schemas), `${yer}: openapi operationIds/schemas dizi olmali`);
   dogrula(operationIds.every((kimlik) => kimlikler.has(kimlik)), `${yer}: OpenAPI'de olmayan operationId`);
   dogrula(schemas.every((ad) => Object.hasOwn(semalar, ad)), `${yer}: OpenAPI'de olmayan schema`);
+  const kayitlar = satir.apiBehaviors.map((id) => davranislar.get(id));
+  const esit = (liste, beklenen) => new Set(liste).size === liste.length &&
+    liste.length === beklenen.size && liste.every((o) => beklenen.has(o));
+  dogrula(esit(operationIds, new Set(kayitlar.map((d) => d.operationId))),
+    `${yer}: openapi.operationIds apiBehaviors operationId birlesimine esit olmali`);
+  dogrula(esit(schemas, new Set(kayitlar.flatMap((d) => d.schemas))),
+    `${yer}: openapi.schemas apiBehaviors schema birlesimine esit olmali`);
   dogrula(readinessDegerleri.includes(satir.readiness), `${yer}: readiness ${readinessDegerleri.join('|')} olmali`);
   if (satir.readiness !== 'READY') {
     dogrula(satir.blockers.length > 0, `${yer}: ${satir.readiness} satir blocker tasimali`);
@@ -86,19 +209,6 @@ function satirDogrula(satir, matris, davranislar, kimlikler, semalar) {
   }
   dogrula(satir.blockers.length === 0, `${yer}: READY satir blocker tasiyamaz`);
   dogrula(satir.testOracle.status === 'VERIFIED', `${yer}: READY icin testOracle VERIFIED ve ID'li olmali`);
-  dogrula(satir.apiBehaviors.every((id) => {
-    const d = davranislar.get(id);
-    return d.operationId !== null && d.schemas.length > 0;
-  }), `${yer}: READY icin tum apiBehavior'lar operationId ve schema ile cozulmus olmali`);
-  dogrula(operationIds.length > 0, `${yer}: READY icin gercek operationId gerekli`);
-  dogrula(schemas.length > 0, `${yer}: READY icin gercek schema gerekli`);
-  const kayitlar = satir.apiBehaviors.map((id) => davranislar.get(id));
-  const esit = (liste, beklenen) => new Set(liste).size === liste.length &&
-    liste.length === beklenen.size && liste.every((o) => beklenen.has(o));
-  dogrula(esit(operationIds, new Set(kayitlar.map((d) => d.operationId))),
-    `${yer}: READY openapi.operationIds apiBehaviors operationId birlesimine esit olmali`);
-  dogrula(esit(schemas, new Set(kayitlar.flatMap((d) => d.schemas))),
-    `${yer}: READY openapi.schemas apiBehaviors schema birlesimine esit olmali`);
   dogrula(nodlar.length > 0 && nodlar.every((n) => n.status === 'VERIFIED'),
     `${yer}: READY icin tum Figma node'lari VERIFIED olmali`);
   dogrula(durumlar.every((d) => satir.states[d].status === 'VERIFIED' && satir.states[d].figmaNode !== null),
@@ -116,9 +226,9 @@ export function pilotMatrisDogrula(matris, openapi) {
   const beklenen = Object.keys(platformJira).flatMap((p) => Object.keys(akisJira).map((a) => `${p}/${a}`));
   dogrula(kombinasyonlar.size === 12 && beklenen.every((k) => kombinasyonlar.has(k)),
     'Windows/Android x Login, Musteri, Urun/Fiyat, Satis, Stok, Kasa Ozeti kombinasyonlari tam ve tekil olmali');
-  const kimlikler = operasyonKimlikleri(openapi);
+  const kimlikler = operasyonlar(openapi);
   const semalar = openapi.components?.schemas ?? {};
-  const davranislar = davranisDogrula(matris, kimlikler, semalar);
+  const davranislar = davranisDogrula(matris, kimlikler, semalar, openapi);
   for (const satir of matris.rows) satirDogrula(satir, matris, davranislar, kimlikler, semalar);
   return true;
 }

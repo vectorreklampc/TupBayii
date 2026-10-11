@@ -9,11 +9,34 @@ const openapi = await oku('../openapi.json');
 const kopya = () => structuredClone(temel);
 const durumlar = ['loading', 'empty', 'validation', 'permission', 'networkError', 'success'];
 
-const apiBelgesi = () => {
-  const belge = structuredClone(openapi);
-  belge.paths['/api/giris'] = { post: { operationId: 'girisYap' } };
-  belge.components.schemas.GirisIstegi = { type: 'object' };
-  return belge;
+const beklenenOperasyonlar = {
+  'login-open': 'login', 'login-close': 'logout', 'login-revoke': 'revokeSession',
+  'musteri-create': 'createCustomer', 'musteri-update': 'updateCustomer',
+  'musteri-deactivate': 'deactivateCustomer', 'musteri-search-by-phone': 'searchCustomersByPhone',
+  'urun-list': 'listProducts', 'urun-current-price': 'getCurrentProductPrice',
+  'stok-list': 'listStock', 'stok-movement-history': 'listStockMovements',
+  'stok-authorized-correction': 'createStockCorrection', 'stok-sale-effect': 'completeSale',
+  'stok-empty-return-effect': 'completeSale', 'satis-complete-cash': 'completeSale',
+  'satis-complete-current-account': 'completeSale', 'satis-cancel': 'cancelSale',
+  'kasa-daily-summary': 'getDailyCashSummary', 'kasa-opening': 'openCashDay',
+  'kasa-day-end-count': 'submitDayEndCount'
+};
+const idempotentOperasyonlar = ['createStockCorrection', 'completeSale', 'cancelSale', 'openCashDay', 'submitDayEndCount'];
+const listeOperasyonlari = ['searchCustomersByPhone', 'listProducts', 'listStock', 'listStockMovements'];
+
+function operasyonBul(belge, kimlik) {
+  for (const [yol, ogeler] of Object.entries(belge.paths)) {
+    for (const [metot, islem] of Object.entries(ogeler)) {
+      if (islem?.operationId === kimlik) return { yol, metot, islem };
+    }
+  }
+  throw new Error(`operasyon yok: ${kimlik}`);
+}
+
+const apiReddeder = (degistir, desen) => {
+  const api = structuredClone(openapi);
+  degistir(api);
+  assert.throws(() => pilotMatrisDogrula(kopya(), api), desen);
 };
 
 function hazirSatir() {
@@ -22,12 +45,7 @@ function hazirSatir() {
   satir.readiness = 'READY';
   satir.humanApproval = true;
   satir.blockers = [];
-  satir.openapi = { operationIds: ['girisYap'], schemas: ['GirisIstegi'] };
   satir.testOracle = { status: 'VERIFIED', ids: ['TBP-900'] };
-  for (const davranis of matris.apiBehaviors.filter((d) => satir.apiBehaviors.includes(d.id))) {
-    davranis.operationId = 'girisYap';
-    davranis.schemas = ['GirisIstegi'];
-  }
   satir.figma.nodes = [{ id: '1:1', name: 'Login', status: 'VERIFIED' }];
   for (const durum of durumlar) satir.states[durum] = { status: 'VERIFIED', figmaNode: '1:1' };
   return { matris, satir };
@@ -74,16 +92,15 @@ test('olmayan operationId/schema satirda kayitli olamaz', () => {
 
 test('READY satir tum kanit varsa gecer', () => {
   const { matris } = hazirSatir();
-  assert.equal(pilotMatrisDogrula(matris, apiBelgesi()), true);
+  assert.equal(pilotMatrisDogrula(matris, openapi), true);
 });
 
 test('READY satir kanit eksikse false-ready olarak reddedilir', () => {
-  const dene = (degistir, desen, api = apiBelgesi()) => {
+  const dene = (degistir, desen) => {
     const { matris, satir } = hazirSatir();
     degistir(satir);
-    assert.throws(() => pilotMatrisDogrula(matris, api), desen);
+    assert.throws(() => pilotMatrisDogrula(matris, openapi), desen);
   };
-  assert.throws(() => pilotMatrisDogrula(hazirSatir().matris, openapi), /operationId/);
   dene((s) => { s.openapi.operationIds = []; }, /operation/);
   dene((s) => { s.openapi.schemas = []; }, /schema/);
   dene((s) => { s.figma.nodes = []; }, /Figma/);
@@ -100,22 +117,116 @@ test('READY satir kanit eksikse false-ready olarak reddedilir', () => {
 test('READY satirdaki behavior OpenAPI ile cozulmeli', () => {
   const { matris, satir } = hazirSatir();
   matris.apiBehaviors.find((d) => d.id === satir.apiBehaviors[0]).operationId = null;
-  assert.throws(() => pilotMatrisDogrula(matris, apiBelgesi()), /apiBehavior/);
+  assert.throws(() => pilotMatrisDogrula(matris, openapi), /apiBehavior/);
 });
 
-test('READY openapi kumeleri behavior birlesimiyle tam esit olmali', () => {
-  const dene = (degistir, desen) => {
-    const { matris, satir } = hazirSatir();
-    const api = apiBelgesi();
-    api.paths['/api/baska'] = { get: { operationId: 'baskaIslem' } };
-    api.components.schemas.BaskaSema = { type: 'object' };
-    degistir(satir);
-    assert.throws(() => pilotMatrisDogrula(matris, api), desen);
-  };
-  dene((s) => { s.openapi.operationIds = ['girisYap', 'baskaIslem']; }, /operationId/);
-  dene((s) => { s.openapi.schemas = ['GirisIstegi', 'BaskaSema']; }, /schema/);
-  dene((s) => { s.openapi.operationIds = ['baskaIslem']; }, /operationId/);
-  dene((s) => { s.openapi.schemas = ['BaskaSema']; }, /schema/);
+test('her readiness icin satir openapi kumeleri behavior birlesimiyle tam esit olmali', () => {
+  const ilk = kopya().rows[0].openapi;
+  reddeder((m) => { m.rows[0].openapi.operationIds = [...ilk.operationIds, 'listProducts']; }, /operationId/);
+  reddeder((m) => { m.rows[0].openapi.schemas = [...ilk.schemas, 'Urun']; }, /schema/);
+  reddeder((m) => { m.rows[0].openapi.operationIds = ilk.operationIds.slice(1); }, /operationId/);
+  reddeder((m) => { m.rows[0].openapi.schemas = ilk.schemas.slice(1); }, /schema/);
+  reddeder((m) => { m.rows[0].openapi.operationIds = [...ilk.operationIds, ilk.operationIds[0]]; }, /operationId/);
+  const { matris, satir } = hazirSatir();
+  satir.openapi.operationIds = [...satir.openapi.operationIds, 'listProducts'];
+  assert.throws(() => pilotMatrisDogrula(matris, openapi), /operationId/);
+});
+
+test('20 Jira davranisi kararli operationId ve tipli schema ile bagli', () => {
+  const { apiBehaviors } = kopya();
+  assert.deepEqual(Object.fromEntries(apiBehaviors.map((d) => [d.id, d.operationId])), beklenenOperasyonlar);
+  for (const d of apiBehaviors) assert.ok(d.schemas.length > 0, `${d.id} schema bagli degil`);
+  reddeder((m) => { m.apiBehaviors[0].operationId = null; }, /apiBehavior/);
+  reddeder((m) => { m.apiBehaviors[0].schemas = []; }, /schema/);
+  reddeder((m) => { m.apiBehaviors.find((d) => d.id === 'login-open').schemas = ['OturumAcmaIstegi', 'OturumYaniti', 'Musteri']; }, /schema/);
+  reddeder((m) => { m.apiBehaviors.find((d) => d.id === 'login-open').schemas = ['OturumYaniti']; }, /schema/);
+  reddeder((m) => { m.apiBehaviors.find((d) => d.id === 'urun-list').schemas = ['Sayfalama']; }, /schema/);
+});
+
+test('bagli operasyonlar /api/v1 altinda cogul kaynakta, bearer korumali; yalniz login anonim', () => {
+  assert.equal(openapi.components.securitySchemes.bearerAuth.type, 'http');
+  assert.equal(openapi.components.securitySchemes.bearerAuth.scheme, 'bearer');
+  for (const kimlik of new Set(Object.values(beklenenOperasyonlar))) {
+    const { yol, islem } = operasyonBul(openapi, kimlik);
+    assert.match(yol, /^\/api\/v1\//, kimlik);
+    if (kimlik === 'login') assert.deepEqual(islem.security, []);
+    else assert.deepEqual(islem.security, [{ bearerAuth: [] }], kimlik);
+  }
+  apiReddeder((api) => {
+    const { islem } = operasyonBul(api, 'listProducts');
+    islem.security = [];
+    islem['x-anonymous-reason'] = 'deneme';
+  }, /bearer/);
+  apiReddeder((api) => { api.components.securitySchemes.bearerAuth = { type: 'apiKey', name: 'k', in: 'header' }; }, /bearer/);
+  apiReddeder((api) => {
+    api.paths['/api/urunler'] = api.paths['/api/v1/urunler'];
+    delete api.paths['/api/v1/urunler'];
+  }, /api\/v1/);
+  apiReddeder((api) => {
+    api.paths['/api/v1/urun'] = api.paths['/api/v1/urunler'];
+    delete api.paths['/api/v1/urunler'];
+  }, /cogul/);
+});
+
+test('client tenant, connection string veya secret gonderemez', () => {
+  apiReddeder((api) => { api.components.schemas.MusteriOlusturmaIstegi.properties.tenantId = { type: 'string' }; }, /tenant/);
+  apiReddeder((api) => {
+    operasyonBul(api, 'listProducts').islem.parameters.push({ name: 'tenantId', in: 'query', schema: { type: 'string' } });
+  }, /tenant/);
+  apiReddeder((api) => {
+    operasyonBul(api, 'completeSale').islem.parameters.push({ name: 'X-Connection-String', in: 'header', schema: { type: 'string' } });
+  }, /tenant/);
+  apiReddeder((api) => { api.components.schemas.SatisKalemi.properties.clientSecret = { type: 'string' }; }, /tenant/);
+});
+
+test('stok/finans yazmalari Idempotency-Key ister; reuse ve in-flight 409 kodlariyla belgelenir', () => {
+  for (const kimlik of idempotentOperasyonlar) {
+    const { islem } = operasyonBul(openapi, kimlik);
+    assert.equal(islem['x-idempotency-required'], true, kimlik);
+    assert.ok(islem.parameters.some((p) => p.$ref === '#/components/parameters/IdempotencyKey'), kimlik);
+    assert.deepEqual(islem['x-error-codes']['409'].slice(0, 2), ['IDEMPOTENCY_CONFLICT', 'IDEMPOTENCY_IN_PROGRESS'], kimlik);
+  }
+  assert.match(openapi.components.parameters.IdempotencyKey.description, /IDEMPOTENCY_CONFLICT/);
+  assert.match(openapi.components.parameters.IdempotencyKey.description, /IDEMPOTENCY_IN_PROGRESS/);
+  apiReddeder((api) => {
+    const { islem } = operasyonBul(api, 'completeSale');
+    islem['x-idempotency-required'] = false;
+    islem['x-retry-semantics'] = 'deneme';
+    islem.parameters = islem.parameters.filter((p) => p.$ref !== '#/components/parameters/IdempotencyKey');
+  }, /Idempotency/);
+  apiReddeder((api) => { operasyonBul(api, 'openCashDay').islem['x-error-codes']['409'] = ['IDEMPOTENCY_CONFLICT']; }, /IDEMPOTENCY_IN_PROGRESS/);
+  apiReddeder((api) => { operasyonBul(api, 'cancelSale').islem['x-error-codes']['418'] = ['IDEMPOTENCY_CONFLICT']; }, /x-error-codes/);
+  apiReddeder((api) => { operasyonBul(api, 'cancelSale').islem['x-error-codes']['409'].push('kucuk-kod'); }, /x-error-codes/);
+});
+
+test('liste uclari sayfali, tekil uclar tipli schema dondurur', () => {
+  for (const kimlik of listeOperasyonlari) assert.equal(operasyonBul(openapi, kimlik).islem['x-collection'], true, kimlik);
+  apiReddeder((api) => { operasyonBul(api, 'listStock').islem['x-collection'] = false; }, /sayfa/);
+  apiReddeder((api) => {
+    operasyonBul(api, 'getDailyCashSummary').islem.responses['200'].content['application/json'].schema = { type: 'object' };
+  }, /schema/);
+});
+
+test('girdi ve cikti semalari ayrik ve tipli', () => {
+  apiReddeder((api) => {
+    operasyonBul(api, 'updateCustomer').islem.responses['200'].content['application/json'].schema =
+      { $ref: '#/components/schemas/MusteriGuncellemeIstegi' };
+  }, /girdi/);
+  apiReddeder((api) => {
+    operasyonBul(api, 'createCustomer').islem.requestBody.content['application/json'].schema = { type: 'object' };
+  }, /girdi/);
+});
+
+test('cozulen OpenAPI blocker kaldirildi; Figma/testOracle/insan onayi eksigi BLOCKED tutar', () => {
+  for (const satir of kopya().rows) {
+    assert.equal(satir.readiness, 'BLOCKED', satir.id);
+    assert.equal(satir.humanApproval, false, satir.id);
+    assert.equal(satir.testOracle.status, 'MISSING', satir.id);
+    assert.ok(satir.blockers.every((b) => !/paths bos|securitySchemes yok|Jira api davranislari yerel olarak kopyalanmadi/.test(b)), satir.id);
+    assert.ok(satir.blockers.some((b) => /testOracle/.test(b)), satir.id);
+    assert.ok(satir.blockers.some((b) => /humanApproval/.test(b)), satir.id);
+    assert.ok(satir.openapi.operationIds.length > 0 && satir.openapi.schemas.length > 0, satir.id);
+  }
 });
 
 test('requirements pilotJira ve platformJira icermeli', () => {

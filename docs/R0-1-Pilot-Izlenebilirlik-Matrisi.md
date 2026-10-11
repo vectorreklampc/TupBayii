@@ -7,8 +7,9 @@
 12 satır: {Windows, Android} × {Login, Müşteri, Ürün/Fiyat, Satış, Stok, Kasa Özeti}. Her satır:
 
 - `pilotJira` / `platformJira` / `mainPlanJira`: eşleşen Jira anahtarları. Login `TBP-249` (ana plan `TBP-60,61,62,65,74-83`); Müşteri ve Ürün/Fiyat `TBP-250` (`TBP-85-104`); Stok `TBP-251` (`TBP-106-116`); Satış `TBP-252` (`TBP-100,118-128`); Kasa `TBP-253` (`TBP-142,143,146,147,149-151`); Windows `TBP-255`; Android `TBP-256`.
-- `requirements`, `apiBehaviors`: gereksinim metni yerelde kopyalanmaz; API davranışları canlı Jira okunana kadar boştur.
-- `openapi.operationIds` / `schemas`: yalnız `contracts/openapi.json`'da gerçekten bulunan değerler. Contract'ta `paths` boş ve `securitySchemes` yok; bu yüzden hepsi boştur. Önerilmiş/uydurma operationId yazılmaz.
+- `requirements`: Jira anahtarları; gereksinim metni yerelde kopyalanmaz.
+- `apiBehaviors`: satırın davranış id'leri. Kök `apiBehaviors` kataloğu her davranışı `sourceJira`, `operationId` ve `schemas` ile `contracts/openapi.json`'a bağlar.
+- `openapi.operationIds` / `schemas`: satırın `apiBehaviors` kayıtlarının operationId ve schema birleşimi; hepsi `contracts/openapi.json`'da gerçekten bulunur. Contract `/api/v1` altında operasyonlar ve `bearerAuth` security scheme'i tanımlar: yalnız `login` kimliksizdir, diğerleri bearer ister; stok/satış/kasa yazmaları `Idempotency-Key` header'ı ve 409 `IDEMPOTENCY_CONFLICT`/`IDEMPOTENCY_IN_PROGRESS` taşır. Önerilmiş/uydurma operationId yazılmaz.
 - `figma`: dosya `unveOhyF2AlrBYA34ez6x6` ve node kanıtı (`VERIFIED` / `CANDIDATE`).
 - `states`: `loading`, `empty`, `validation`, `permission`, `networkError`, `success`; her biri `UNVERIFIED`/`VERIFIED`.
 - `testOracle`, `readiness` (`BLOCKED`/`READY`), `humanApproval`, `blockers`.
@@ -42,4 +43,4 @@ npm run validate   # OpenAPI kuralları + pilot matris
 npm test           # validator testleri dahil
 ```
 
-Doğrulayıcı: `contracts/scripts/pilot-matris.mjs` (testi `pilot-matris.test.mjs`). Kontroller: tam 12 tekil kombinasyon, 6 state, Jira anahtarları ve eşlemeleri, release yolu, kapsam dışı, BLOCKED ⇒ blocker, kayıtlı operationId/schema'nın OpenAPI'de varlığı, READY koşulları.
+Doğrulayıcı: `contracts/scripts/pilot-matris.mjs` (testi `pilot-matris.test.mjs`). Kontroller: tam 12 tekil kombinasyon, 6 state, Jira anahtarları ve eşlemeleri, release yolu, kapsam dışı, BLOCKED ⇒ blocker, her apiBehavior için OpenAPI'de bulunan operationId ve operasyonda kullanılan schema'lar, satır `openapi` alanının davranış birleşimine eşitliği, bağlı operasyonlarda `/api/v1` + çoğul kaynak, login dışı bearer security, client'tan tenant/connection string/secret alınmaması, tipli ve ayrık girdi/çıktı schema'ları, liste uçlarının sayfalı koleksiyon olması, `x-error-codes` biçimi, stok/finans yazmalarında Idempotency-Key, READY koşulları.

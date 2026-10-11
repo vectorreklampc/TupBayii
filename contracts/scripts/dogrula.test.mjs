@@ -10,7 +10,7 @@ const iz = { $ref: '#/components/headers/TraceId' };
 
 function listeBelgesi() {
   const belge = kopyala();
-  belge.components.securitySchemes = { Kimlik: { type: 'http', scheme: 'bearer' } };
+  belge.components.securitySchemes = { ...belge.components.securitySchemes, Kimlik: { type: 'http', scheme: 'bearer' } };
   belge.paths['/api/satislar'] = {
     get: {
       operationId: 'satislariGetir', security: [{ Kimlik: [] }], 'x-collection': true,
@@ -36,7 +36,7 @@ function listeBelgesi() {
   return belge;
 }
 
-test('kanonik bos endpoint belgesi gercek ortak semalari dogrular', async () => {
+test('kanonik endpoint belgesi gercek ortak semalari dogrular', async () => {
   assert.equal(await contractDogrula(kopyala()), true);
 });
 

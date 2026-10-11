@@ -61,8 +61,16 @@
         "login-revoke"
       ],
       "openapi": {
-        "operationIds": [],
-        "schemas": []
+        "operationIds": [
+          "login",
+          "logout",
+          "revokeSession"
+        ],
+        "schemas": [
+          "OturumAcmaIstegi",
+          "OturumYaniti",
+          "OturumSonlandirmaSonucu"
+        ]
       },
       "figma": {
         "file": "unveOhyF2AlrBYA34ez6x6",
@@ -101,8 +109,7 @@
       "readiness": "BLOCKED",
       "humanApproval": false,
       "blockers": [
-        "contracts/openapi.json paths bos ve securitySchemes yok: gercek operationId/schema yok.",
-        "Jira api davranislari yerel olarak kopyalanmadi; canli Jira kaydindan okunmadan business karar uydurulmaz.",
+        "Test oracle ID'si yok (testOracle MISSING).",
         "Required state Figma node'lari dogrulanamadi (Figma View kotasi doldu); 6 state UNVERIFIED.",
         "Insan onayi yok (humanApproval=false).",
         "Bu platform-akis icin Figma node kaniti yok."
@@ -147,8 +154,19 @@
         "musteri-search-by-phone"
       ],
       "openapi": {
-        "operationIds": [],
-        "schemas": []
+        "operationIds": [
+          "createCustomer",
+          "updateCustomer",
+          "deactivateCustomer",
+          "searchCustomersByPhone"
+        ],
+        "schemas": [
+          "MusteriOlusturmaIstegi",
+          "MusteriGuncellemeIstegi",
+          "MusteriPasiflestirmeIstegi",
+          "Musteri",
+          "Sayfalama"
+        ]
       },
       "figma": {
         "file": "unveOhyF2AlrBYA34ez6x6",
@@ -208,8 +226,7 @@
       "readiness": "BLOCKED",
       "humanApproval": false,
       "blockers": [
-        "contracts/openapi.json paths bos ve securitySchemes yok: gercek operationId/schema yok.",
-        "Jira api davranislari yerel olarak kopyalanmadi; canli Jira kaydindan okunmadan business karar uydurulmaz.",
+        "Test oracle ID'si yok (testOracle MISSING).",
         "Required state Figma node'lari dogrulanamadi (Figma View kotasi doldu); 6 state UNVERIFIED.",
         "Insan onayi yok (humanApproval=false).",
         "Aday Figma node'lari bu turde dogrulanamadi; VERIFIED degil."
@@ -252,8 +269,16 @@
         "urun-current-price"
       ],
       "openapi": {
-        "operationIds": [],
-        "schemas": []
+        "operationIds": [
+          "listProducts",
+          "getCurrentProductPrice"
+        ],
+        "schemas": [
+          "Urun",
+          "Sayfalama",
+          "UrunFiyati",
+          "ParaTutari"
+        ]
       },
       "figma": {
         "file": "unveOhyF2AlrBYA34ez6x6",
@@ -298,8 +323,7 @@
       "readiness": "BLOCKED",
       "humanApproval": false,
       "blockers": [
-        "contracts/openapi.json paths bos ve securitySchemes yok: gercek operationId/schema yok.",
-        "Jira api davranislari yerel olarak kopyalanmadi; canli Jira kaydindan okunmadan business karar uydurulmaz.",
+        "Test oracle ID'si yok (testOracle MISSING).",
         "Required state Figma node'lari dogrulanamadi (Figma View kotasi doldu); 6 state UNVERIFIED.",
         "Insan onayi yok (humanApproval=false).",
         "Aday Figma node'lari bu turde dogrulanamadi; VERIFIED degil."
@@ -335,8 +359,20 @@
         "satis-cancel"
       ],
       "openapi": {
-        "operationIds": [],
-        "schemas": []
+        "operationIds": [
+          "completeSale",
+          "cancelSale"
+        ],
+        "schemas": [
+          "SatisTamamlamaIstegi",
+          "NakitOdeme",
+          "CariOdeme",
+          "SatisIptalIstegi",
+          "Satis",
+          "SatisKalemiSonucu",
+          "ParaTutari",
+          "StokHareketi"
+        ]
       },
       "figma": {
         "file": "unveOhyF2AlrBYA34ez6x6",
@@ -396,8 +432,7 @@
       "readiness": "BLOCKED",
       "humanApproval": false,
       "blockers": [
-        "contracts/openapi.json paths bos ve securitySchemes yok: gercek operationId/schema yok.",
-        "Jira api davranislari yerel olarak kopyalanmadi; canli Jira kaydindan okunmadan business karar uydurulmaz.",
+        "Test oracle ID'si yok (testOracle MISSING).",
         "Required state Figma node'lari dogrulanamadi (Figma View kotasi doldu); 6 state UNVERIFIED.",
         "Insan onayi yok (humanApproval=false)."
       ]
@@ -433,8 +468,22 @@
         "stok-empty-return-effect"
       ],
       "openapi": {
-        "operationIds": [],
-        "schemas": []
+        "operationIds": [
+          "listStock",
+          "listStockMovements",
+          "createStockCorrection",
+          "completeSale"
+        ],
+        "schemas": [
+          "StokKalemi",
+          "TupDurumu",
+          "Sayfalama",
+          "StokHareketi",
+          "StokDuzeltmeIstegi",
+          "SatisTamamlamaIstegi",
+          "SatisKalemi",
+          "Satis"
+        ]
       },
       "figma": {
         "file": "unveOhyF2AlrBYA34ez6x6",
@@ -484,8 +533,7 @@
       "readiness": "BLOCKED",
       "humanApproval": false,
       "blockers": [
-        "contracts/openapi.json paths bos ve securitySchemes yok: gercek operationId/schema yok.",
-        "Jira api davranislari yerel olarak kopyalanmadi; canli Jira kaydindan okunmadan business karar uydurulmaz.",
+        "Test oracle ID'si yok (testOracle MISSING).",
         "Required state Figma node'lari dogrulanamadi (Figma View kotasi doldu); 6 state UNVERIFIED.",
         "Insan onayi yok (humanApproval=false)."
       ]
@@ -515,8 +563,19 @@
         "kasa-day-end-count"
       ],
       "openapi": {
-        "operationIds": [],
-        "schemas": []
+        "operationIds": [
+          "getDailyCashSummary",
+          "openCashDay",
+          "submitDayEndCount"
+        ],
+        "schemas": [
+          "GunlukKasaOzeti",
+          "KasaAcilisIstegi",
+          "KasaAcilisi",
+          "GunSonuSayimiIstegi",
+          "GunSonuSayimi",
+          "ParaTutari"
+        ]
       },
       "figma": {
         "file": "unveOhyF2AlrBYA34ez6x6",
@@ -555,8 +614,7 @@
       "readiness": "BLOCKED",
       "humanApproval": false,
       "blockers": [
-        "contracts/openapi.json paths bos ve securitySchemes yok: gercek operationId/schema yok.",
-        "Jira api davranislari yerel olarak kopyalanmadi; canli Jira kaydindan okunmadan business karar uydurulmaz.",
+        "Test oracle ID'si yok (testOracle MISSING).",
         "Required state Figma node'lari dogrulanamadi (Figma View kotasi doldu); 6 state UNVERIFIED.",
         "Insan onayi yok (humanApproval=false).",
         "Bu platform-akis icin Figma node kaniti yok."
@@ -594,8 +652,16 @@
         "login-revoke"
       ],
       "openapi": {
-        "operationIds": [],
-        "schemas": []
+        "operationIds": [
+          "login",
+          "logout",
+          "revokeSession"
+        ],
+        "schemas": [
+          "OturumAcmaIstegi",
+          "OturumYaniti",
+          "OturumSonlandirmaSonucu"
+        ]
       },
       "figma": {
         "file": "unveOhyF2AlrBYA34ez6x6",
@@ -634,8 +700,7 @@
       "readiness": "BLOCKED",
       "humanApproval": false,
       "blockers": [
-        "contracts/openapi.json paths bos ve securitySchemes yok: gercek operationId/schema yok.",
-        "Jira api davranislari yerel olarak kopyalanmadi; canli Jira kaydindan okunmadan business karar uydurulmaz.",
+        "Test oracle ID'si yok (testOracle MISSING).",
         "Required state Figma node'lari dogrulanamadi (Figma View kotasi doldu); 6 state UNVERIFIED.",
         "Insan onayi yok (humanApproval=false).",
         "Bu platform-akis icin Figma node kaniti yok.",
@@ -681,8 +746,19 @@
         "musteri-search-by-phone"
       ],
       "openapi": {
-        "operationIds": [],
-        "schemas": []
+        "operationIds": [
+          "createCustomer",
+          "updateCustomer",
+          "deactivateCustomer",
+          "searchCustomersByPhone"
+        ],
+        "schemas": [
+          "MusteriOlusturmaIstegi",
+          "MusteriGuncellemeIstegi",
+          "MusteriPasiflestirmeIstegi",
+          "Musteri",
+          "Sayfalama"
+        ]
       },
       "figma": {
         "file": "unveOhyF2AlrBYA34ez6x6",
@@ -727,8 +803,7 @@
       "readiness": "BLOCKED",
       "humanApproval": false,
       "blockers": [
-        "contracts/openapi.json paths bos ve securitySchemes yok: gercek operationId/schema yok.",
-        "Jira api davranislari yerel olarak kopyalanmadi; canli Jira kaydindan okunmadan business karar uydurulmaz.",
+        "Test oracle ID'si yok (testOracle MISSING).",
         "Required state Figma node'lari dogrulanamadi (Figma View kotasi doldu); 6 state UNVERIFIED.",
         "Insan onayi yok (humanApproval=false).",
         "Aday Figma node'lari bu turde dogrulanamadi; VERIFIED degil.",
@@ -772,8 +847,16 @@
         "urun-current-price"
       ],
       "openapi": {
-        "operationIds": [],
-        "schemas": []
+        "operationIds": [
+          "listProducts",
+          "getCurrentProductPrice"
+        ],
+        "schemas": [
+          "Urun",
+          "Sayfalama",
+          "UrunFiyati",
+          "ParaTutari"
+        ]
       },
       "figma": {
         "file": "unveOhyF2AlrBYA34ez6x6",
@@ -812,8 +895,7 @@
       "readiness": "BLOCKED",
       "humanApproval": false,
       "blockers": [
-        "contracts/openapi.json paths bos ve securitySchemes yok: gercek operationId/schema yok.",
-        "Jira api davranislari yerel olarak kopyalanmadi; canli Jira kaydindan okunmadan business karar uydurulmaz.",
+        "Test oracle ID'si yok (testOracle MISSING).",
         "Required state Figma node'lari dogrulanamadi (Figma View kotasi doldu); 6 state UNVERIFIED.",
         "Insan onayi yok (humanApproval=false).",
         "Bu platform-akis icin Figma node kaniti yok.",
@@ -850,8 +932,20 @@
         "satis-cancel"
       ],
       "openapi": {
-        "operationIds": [],
-        "schemas": []
+        "operationIds": [
+          "completeSale",
+          "cancelSale"
+        ],
+        "schemas": [
+          "SatisTamamlamaIstegi",
+          "NakitOdeme",
+          "CariOdeme",
+          "SatisIptalIstegi",
+          "Satis",
+          "SatisKalemiSonucu",
+          "ParaTutari",
+          "StokHareketi"
+        ]
       },
       "figma": {
         "file": "unveOhyF2AlrBYA34ez6x6",
@@ -890,8 +984,7 @@
       "readiness": "BLOCKED",
       "humanApproval": false,
       "blockers": [
-        "contracts/openapi.json paths bos ve securitySchemes yok: gercek operationId/schema yok.",
-        "Jira api davranislari yerel olarak kopyalanmadi; canli Jira kaydindan okunmadan business karar uydurulmaz.",
+        "Test oracle ID'si yok (testOracle MISSING).",
         "Required state Figma node'lari dogrulanamadi (Figma View kotasi doldu); 6 state UNVERIFIED.",
         "Insan onayi yok (humanApproval=false).",
         "Bu platform-akis icin Figma node kaniti yok.",
@@ -929,8 +1022,22 @@
         "stok-empty-return-effect"
       ],
       "openapi": {
-        "operationIds": [],
-        "schemas": []
+        "operationIds": [
+          "listStock",
+          "listStockMovements",
+          "createStockCorrection",
+          "completeSale"
+        ],
+        "schemas": [
+          "StokKalemi",
+          "TupDurumu",
+          "Sayfalama",
+          "StokHareketi",
+          "StokDuzeltmeIstegi",
+          "SatisTamamlamaIstegi",
+          "SatisKalemi",
+          "Satis"
+        ]
       },
       "figma": {
         "file": "unveOhyF2AlrBYA34ez6x6",
@@ -969,8 +1076,7 @@
       "readiness": "BLOCKED",
       "humanApproval": false,
       "blockers": [
-        "contracts/openapi.json paths bos ve securitySchemes yok: gercek operationId/schema yok.",
-        "Jira api davranislari yerel olarak kopyalanmadi; canli Jira kaydindan okunmadan business karar uydurulmaz.",
+        "Test oracle ID'si yok (testOracle MISSING).",
         "Required state Figma node'lari dogrulanamadi (Figma View kotasi doldu); 6 state UNVERIFIED.",
         "Insan onayi yok (humanApproval=false).",
         "Bu platform-akis icin Figma node kaniti yok.",
@@ -1002,8 +1108,19 @@
         "kasa-day-end-count"
       ],
       "openapi": {
-        "operationIds": [],
-        "schemas": []
+        "operationIds": [
+          "getDailyCashSummary",
+          "openCashDay",
+          "submitDayEndCount"
+        ],
+        "schemas": [
+          "GunlukKasaOzeti",
+          "KasaAcilisIstegi",
+          "KasaAcilisi",
+          "GunSonuSayimiIstegi",
+          "GunSonuSayimi",
+          "ParaTutari"
+        ]
       },
       "figma": {
         "file": "unveOhyF2AlrBYA34ez6x6",
@@ -1042,8 +1159,7 @@
       "readiness": "BLOCKED",
       "humanApproval": false,
       "blockers": [
-        "contracts/openapi.json paths bos ve securitySchemes yok: gercek operationId/schema yok.",
-        "Jira api davranislari yerel olarak kopyalanmadi; canli Jira kaydindan okunmadan business karar uydurulmaz.",
+        "Test oracle ID'si yok (testOracle MISSING).",
         "Required state Figma node'lari dogrulanamadi (Figma View kotasi doldu); 6 state UNVERIFIED.",
         "Insan onayi yok (humanApproval=false).",
         "Bu platform-akis icin Figma node kaniti yok.",
@@ -1056,141 +1172,215 @@
       "id": "login-open",
       "sourceJira": "TBP-249",
       "summary": "Login ac",
-      "operationId": null,
-      "schemas": []
+      "operationId": "login",
+      "schemas": [
+        "OturumAcmaIstegi",
+        "OturumYaniti"
+      ]
     },
     {
       "id": "login-close",
       "sourceJira": "TBP-249",
       "summary": "Login kapat",
-      "operationId": null,
-      "schemas": []
+      "operationId": "logout",
+      "schemas": [
+        "OturumSonlandirmaSonucu"
+      ]
     },
     {
       "id": "login-revoke",
       "sourceJira": "TBP-249",
       "summary": "Login revoke",
-      "operationId": null,
-      "schemas": []
+      "operationId": "revokeSession",
+      "schemas": [
+        "OturumSonlandirmaSonucu"
+      ]
     },
     {
       "id": "musteri-create",
       "sourceJira": "TBP-250",
       "summary": "Musteri olustur",
-      "operationId": null,
-      "schemas": []
+      "operationId": "createCustomer",
+      "schemas": [
+        "MusteriOlusturmaIstegi",
+        "Musteri"
+      ]
     },
     {
       "id": "musteri-update",
       "sourceJira": "TBP-250",
       "summary": "Musteri guncelle",
-      "operationId": null,
-      "schemas": []
+      "operationId": "updateCustomer",
+      "schemas": [
+        "MusteriGuncellemeIstegi",
+        "Musteri"
+      ]
     },
     {
       "id": "musteri-deactivate",
       "sourceJira": "TBP-250",
       "summary": "Musteri pasife al",
-      "operationId": null,
-      "schemas": []
+      "operationId": "deactivateCustomer",
+      "schemas": [
+        "MusteriPasiflestirmeIstegi",
+        "Musteri"
+      ]
     },
     {
       "id": "musteri-search-by-phone",
       "sourceJira": "TBP-250",
       "summary": "Telefonla musteri ara",
-      "operationId": null,
-      "schemas": []
+      "operationId": "searchCustomersByPhone",
+      "schemas": [
+        "Musteri",
+        "Sayfalama"
+      ]
     },
     {
       "id": "urun-list",
       "sourceJira": "TBP-250",
       "summary": "Urun listesi",
-      "operationId": null,
-      "schemas": []
+      "operationId": "listProducts",
+      "schemas": [
+        "Urun",
+        "Sayfalama"
+      ]
     },
     {
       "id": "urun-current-price",
       "sourceJira": "TBP-250",
       "summary": "Urun guncel fiyat",
-      "operationId": null,
-      "schemas": []
+      "operationId": "getCurrentProductPrice",
+      "schemas": [
+        "UrunFiyati",
+        "ParaTutari"
+      ]
     },
     {
       "id": "stok-list",
       "sourceJira": "TBP-251",
       "summary": "Stok listesi",
-      "operationId": null,
-      "schemas": []
+      "operationId": "listStock",
+      "schemas": [
+        "StokKalemi",
+        "TupDurumu",
+        "Sayfalama"
+      ]
     },
     {
       "id": "stok-movement-history",
       "sourceJira": "TBP-251",
       "summary": "Stok hareket gecmisi",
-      "operationId": null,
-      "schemas": []
+      "operationId": "listStockMovements",
+      "schemas": [
+        "StokHareketi",
+        "TupDurumu",
+        "Sayfalama"
+      ]
     },
     {
       "id": "stok-authorized-correction",
       "sourceJira": "TBP-251",
       "summary": "Yetkili stok duzeltme",
-      "operationId": null,
-      "schemas": []
+      "operationId": "createStockCorrection",
+      "schemas": [
+        "StokDuzeltmeIstegi",
+        "StokHareketi",
+        "TupDurumu"
+      ]
     },
     {
       "id": "stok-sale-effect",
       "sourceJira": "TBP-251",
       "summary": "Satis stok etkisi",
-      "operationId": null,
-      "schemas": []
+      "operationId": "completeSale",
+      "schemas": [
+        "SatisTamamlamaIstegi",
+        "SatisKalemi",
+        "Satis",
+        "StokHareketi"
+      ]
     },
     {
       "id": "stok-empty-return-effect",
       "sourceJira": "TBP-251",
       "summary": "Bos iade stok etkisi",
-      "operationId": null,
-      "schemas": []
+      "operationId": "completeSale",
+      "schemas": [
+        "SatisTamamlamaIstegi",
+        "SatisKalemi",
+        "Satis",
+        "StokHareketi"
+      ]
     },
     {
       "id": "satis-complete-cash",
       "sourceJira": "TBP-252",
       "summary": "Satis tamamla (nakit)",
-      "operationId": null,
-      "schemas": []
+      "operationId": "completeSale",
+      "schemas": [
+        "SatisTamamlamaIstegi",
+        "NakitOdeme",
+        "Satis",
+        "SatisKalemiSonucu",
+        "ParaTutari"
+      ]
     },
     {
       "id": "satis-complete-current-account",
       "sourceJira": "TBP-252",
       "summary": "Satis tamamla (cari hesap)",
-      "operationId": null,
-      "schemas": []
+      "operationId": "completeSale",
+      "schemas": [
+        "SatisTamamlamaIstegi",
+        "CariOdeme",
+        "Satis",
+        "SatisKalemiSonucu",
+        "ParaTutari"
+      ]
     },
     {
       "id": "satis-cancel",
       "sourceJira": "TBP-252",
       "summary": "Satis iptal",
-      "operationId": null,
-      "schemas": []
+      "operationId": "cancelSale",
+      "schemas": [
+        "SatisIptalIstegi",
+        "Satis",
+        "StokHareketi"
+      ]
     },
     {
       "id": "kasa-daily-summary",
       "sourceJira": "TBP-253",
       "summary": "Gunluk ozet",
-      "operationId": null,
-      "schemas": []
+      "operationId": "getDailyCashSummary",
+      "schemas": [
+        "GunlukKasaOzeti",
+        "ParaTutari"
+      ]
     },
     {
       "id": "kasa-opening",
       "sourceJira": "TBP-253",
       "summary": "Kasa acilis",
-      "operationId": null,
-      "schemas": []
+      "operationId": "openCashDay",
+      "schemas": [
+        "KasaAcilisIstegi",
+        "KasaAcilisi",
+        "ParaTutari"
+      ]
     },
     {
       "id": "kasa-day-end-count",
       "sourceJira": "TBP-253",
       "summary": "Gun sonu sayim",
-      "operationId": null,
-      "schemas": []
+      "operationId": "submitDayEndCount",
+      "schemas": [
+        "GunSonuSayimiIstegi",
+        "GunSonuSayimi",
+        "ParaTutari"
+      ]
     }
   ]
 }
