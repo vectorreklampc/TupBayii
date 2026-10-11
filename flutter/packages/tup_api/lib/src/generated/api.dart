@@ -7,6 +7,7 @@ import 'package:tup_api/src/generated/auth/api_key_auth.dart';
 import 'package:tup_api/src/generated/auth/basic_auth.dart';
 import 'package:tup_api/src/generated/auth/bearer_auth.dart';
 import 'package:tup_api/src/generated/auth/oauth.dart';
+import 'package:tup_api/src/generated/api/default_api.dart';
 import 'package:tup_api/src/generated/api/system_api.dart';
 
 class TupApi {
@@ -73,6 +74,12 @@ class TupApi {
               .apiKeys[name] =
           apiKey;
     }
+  }
+
+  /// Get DefaultApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  DefaultApi getDefaultApi() {
+    return DefaultApi(dio);
   }
 
   /// Get SystemApi instance, base route and serializer can be overridden by a given but be careful,
