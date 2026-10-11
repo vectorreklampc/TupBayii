@@ -1,0 +1,14 @@
+{
+  "name": "tupbayiproje-event-contracts",
+  "private": true,
+  "type": "module",
+  "packageManager": "npm@11.11.0",
+  "scripts": {
+    "validate": "node scripts/dogrula.mjs",
+    "test": "node --test"
+  },
+  "devDependencies": {
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1"
+  }
+}

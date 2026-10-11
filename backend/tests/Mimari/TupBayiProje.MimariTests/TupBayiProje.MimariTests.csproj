@@ -8,10 +8,17 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\Moduller\Audit\Altyapi\TupBayiProje.Moduller.Audit.Altyapi.csproj" />
+    <ProjectReference Include="..\..\..\src\Moduller\Tenancy\Altyapi\TupBayiProje.Moduller.Tenancy.Altyapi.csproj" />
+    <ProjectReference Include="..\..\..\src\Moduller\Tenancy\Uygulama\TupBayiProje.Moduller.Tenancy.Uygulama.csproj" />
   </ItemGroup>
 </Project>

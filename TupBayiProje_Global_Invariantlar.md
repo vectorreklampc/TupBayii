@@ -6,6 +6,33 @@
 
 Bu belge, TupBayiProje için uygulama ayrıntılarından bağımsız ve değiştirilemez sistem ilkelerini tanımlar. Kod, yapılandırma, veri modeli ve operasyon süreçleri bu kurallara uymak zorundadır. Çelişki halinde Jira gereksinimleri ve bu belgede kayıtlı invariantlar uygulanır.
 
+## Yürütülebilir kayıt defteri
+
+Bu belge invariant tanımının insan-okunur normatif kaynağıdır.
+[`factory/invariants/kayit-defteri.json`](factory/invariants/kayit-defteri.json)
+aynı kimlikler için yürütülebilir metadata companion'ıdır. Her kayıt; kimlik,
+sınıf, tanım, gerekçe, kaynak requirement/ADR, ihlal örneği, doğrulama yöntemi,
+test kimliği, önem, remediation ve Human Gate kararını taşır.
+
+`factory/src/invariant-kapisi.mjs` iki açık modda fail-closed çalışır:
+
+- **Kayıt defteri/uygunluk modu:** kayıt defteri şeması, kanonik 28 kimlik
+  manifesti, yürütülebilir kurallar, her kuralın pozitif/ihlal örnekleri, bu
+  belgenin başlık paritesi ve kabul edilmiş risk istisnalarının süresi birlikte
+  geçmelidir.
+- **İş kalemi modu:** yalnız işin kabul kriterlerinde kaynak gösterilen ilgili
+  invariantlar değerlendirilir. Kanıt; aynı iş ve aynı yürütmeye bağlı, kayıtlı
+  `testKimligi` ile eşleşen yürütülmüş test gözlemidir. Kapı beyan edilen sonuca
+  güvenmez; gözlemi kayıtlı semantik kurala uygular.
+
+İlgili invariant kanıtı eksik, bilinmeyen, bozuk, eski, eşleşmeyen veya
+kanıtlanamayan ise; ihlal varsa; `CRITICAL` kaydın işe ve invariant'a bağlı
+insan Human Gate kanıtı yoksa ya da kayıt defteri bozuksa sonuç `BLOCKED` olur.
+Kapı yalnız sağlanan yürütülmüş kanıtı değerlendirir; henüz uygulanmamış ürün
+alanlarının uyumlu olduğunu beyan etmez. Tanım değişikliği
+yalnız iki kaynağı birlikte güncelleyen, ilgili fixture/test kanıtını yenileyen ve
+`INV-GOV-002` değişiklik yetkisini sağlayan Jira Change Request ile yapılabilir.
+
 ## 1. Tenant izolasyonu ve veri sahipliği
 
 ### `INV-TEN-001` — Database-per-Tenant
@@ -114,6 +141,10 @@ Secret, parola, token, tam ödeme verisi ve gereksiz kişisel veri log veya audi
 
 HIGH ve CRITICAL riskli işler somut Test Oracle veya Golden Scenario kanıtı olmadan tamamlanmış sayılamaz.
 
+### `INV-AUD-005` — Uçtan uca izlenebilirlik
+
+Her dış istek tek ve kendine özgü bir trace/correlation kimliği taşır. Bu kimlik girişte üretilir veya doğrulanır ve API, servis, arka plan işi ve entegrasyon adımlarının tamamında aynı değerle yayılır; kopuk veya paylaşılan correlation kimliği kabul edilemez.
+
 ## 7. Human Gate ve değişiklik yetkisi
 
 ### `INV-GOV-001` — Kritik değişiklik onayı
@@ -133,6 +164,10 @@ Bir invariant değişikliği yalnızca aşağıdaki kanıtların tamamıyla yap�
 5. Gerekli Human Gate kararı.
 
 Bu koşullar yoksa değişiklik `HUMAN_REQUIRED` veya mimari ihlal durumunda `BLOCKED` olarak işaretlenir.
+
+### `INV-GOV-003` — Release kapıları
+
+Test, acceptance ve smoke kapılarının tamamı `PASS` olmadan production release yapılamaz. Sonucu `FAIL` veya bilinmeyen kapı release'i durdurur; kabul edilmiş risk istisnası kapıyı `PASS` yapmaz.
 
 ## 8. Yasak uygulama yolları
 

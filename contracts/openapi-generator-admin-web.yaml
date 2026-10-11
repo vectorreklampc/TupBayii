@@ -1,0 +1,16 @@
+generatorName: typescript-fetch
+inputSpec: /local/contracts/openapi.json
+outputDir: /local/admin-web/src/api/uretilen
+globalProperties:
+  apis: ''
+  models: ''
+  apiDocs: false
+  apiTests: false
+  modelDocs: false
+  modelTests: false
+  supportingFiles: index.ts,runtime.ts
+additionalProperties:
+  supportsES6: true
+  typescriptThreePlus: true
+  useSingleRequestParameter: true
+  enumUnknownDefaultCase: true

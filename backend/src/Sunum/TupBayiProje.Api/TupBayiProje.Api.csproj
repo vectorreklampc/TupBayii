@@ -2,4 +2,9 @@
   <PropertyGroup>
     <RootNamespace>TupBayiProje.Api</RootNamespace>
   </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Moduller\Audit\Altyapi\TupBayiProje.Moduller.Audit.Altyapi.csproj" />
+    <ProjectReference Include="..\..\Moduller\Tenancy\Altyapi\TupBayiProje.Moduller.Tenancy.Altyapi.csproj" />
+  </ItemGroup>
 </Project>

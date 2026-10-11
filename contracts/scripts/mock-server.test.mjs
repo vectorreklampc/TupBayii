@@ -46,3 +46,21 @@ test('OpenAPI operasyonundan tarayiciya uygun mock yanit uretir', async (t) => {
   assert.equal(bulunamadi.status, 404);
   assert.equal((await bulunamadi.json()).code, 'MOCK_OPERATION_NOT_FOUND');
 });
+
+test('kanonik sistem saglik endpointi deterministik trace ile yanit verir', async (t) => {
+  const sunucu = await mockSunucusuOlustur(structuredClone(temel));
+  await new Promise((coz) => sunucu.listen(0, '127.0.0.1', coz));
+  t.after(() => sunucu.close());
+  const { port } = sunucu.address();
+
+  const yanit = await fetch(`http://127.0.0.1:${port}/api/v1/system/health`);
+  assert.equal(yanit.status, 200);
+  assert.equal(yanit.headers.get('traceid'), 'trace-example-001');
+  assert.deepEqual(await yanit.json(), {
+    status: 'ok',
+    service: 'tup-bayi-api',
+    apiVersion: 'v1',
+    timestampUtc: '2026-10-07T00:00:00Z',
+    traceId: 'trace-example-001'
+  });
+});

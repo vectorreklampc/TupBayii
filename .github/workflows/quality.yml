@@ -7,8 +7,46 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
+  factory:
+    name: Factory durum makinesi ve kalicilik testleri
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: factory
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: factory/package-lock.json
+      - run: npm ci
+      - name: Sozdizimi ve statik kontrol
+        run: npm run check
+      - name: Durum makinesi testleri
+        run: npm test
+      # Kayit defteri, kurallar, ornekler, Markdown paritesi ve kabul edilmis
+      # risklerin suresi; admin-web braces/GHSA istisnasi 2026-11-07'de BLOCKED olur.
+      - name: Invariant kayit defteri ve uygunluk kapisi
+        run: node src/invariant-kapisi-cli.mjs kayit-defteri
+      - name: Invariant is kalemi pozitif sozlesmesi
+        run: node src/invariant-kapisi-cli.mjs is-kalemi test/fixtures/is-kalemi-gecerli.json
+      - name: Invariant is kalemi negatif sozlesmesi
+        shell: bash
+        run: |
+          set +e
+          node src/invariant-kapisi-cli.mjs is-kalemi test/fixtures/is-kalemi-ihlal.json > "$RUNNER_TEMP/invariant-ihlal.json"
+          kod=$?
+          set -e
+          if [ "$kod" -ne 1 ]; then
+            echo "Ihlal gozlemi BLOCKED (cikis kodu 1) uretmeliydi; alinan: $kod"
+            exit 1
+          fi
+          jq -e '.sonuc == "BLOCKED" and (.nedenKodlari == ["INVARIANT_IHLALI"])' "$RUNNER_TEMP/invariant-ihlal.json"
+
   backend:
     name: Backend build, format, unit ve mimari
     runs-on: ubuntu-latest
@@ -37,6 +75,9 @@ jobs:
         working-directory: contracts
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
@@ -47,6 +88,66 @@ jobs:
         run: npm run validate
       - name: Pozitif ve negatif contract testleri
         run: npm test
+      - name: PR base contract'ini gecici dosyaya cikar
+        if: github.event_name == 'pull_request'
+        id: baseline
+        shell: bash
+        run: |
+          if git cat-file -e "${{ github.event.pull_request.base.sha }}:contracts/openapi.json"; then
+            git show "${{ github.event.pull_request.base.sha }}:contracts/openapi.json" > "$RUNNER_TEMP/openapi-base.json"
+            echo "mevcut=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "mevcut=false" >> "$GITHUB_OUTPUT"
+            echo "Base SHA'da onceki kanonik OpenAPI yok; bu ilk contract yayinidir."
+          fi
+      - name: Breaking OpenAPI degisikligini belirle
+        if: github.event_name == 'pull_request' && steps.baseline.outputs.mevcut == 'true'
+        id: compatibility
+        run: node scripts/kirici-degisiklik-kontrol.mjs "$RUNNER_TEMP/openapi-base.json" openapi.json
+      - name: Pull request review'larini al
+        if: github.event_name == 'pull_request' && steps.compatibility.outputs.kirici == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api --paginate "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/reviews" --slurp > "$RUNNER_TEMP/review-pages.json"
+      - name: Breaking degisiklik onayini dogrula
+        if: github.event_name == 'pull_request' && steps.compatibility.outputs.kirici == 'true'
+        shell: bash
+        run: jq 'add' "$RUNNER_TEMP/review-pages.json" > "$RUNNER_TEMP/reviews.json" && node scripts/kirici-degisiklik-onay.mjs "$RUNNER_TEMP/reviews.json"
+      - name: Bağımlılık güvenliği
+        run: npm audit --audit-level=high
+
+  event-contracts:
+    name: Olay sözleşmesi registry ve uyumluluk
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: event-contracts
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: event-contracts/package-lock.json
+      - run: npm ci
+      - name: Registry ve örnek payload doğrulaması
+        run: npm run validate
+      - name: Pozitif, negatif ve revision testleri
+        run: npm test
+      - name: Base branch ile revision uyumluluğu
+        if: github.event_name == 'pull_request'
+        shell: bash
+        working-directory: .
+        run: |
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          if git cat-file -e "$BASE_SHA:event-contracts/registry.json"; then
+            mkdir -p "$RUNNER_TEMP/event-contracts-base"
+            git archive "$BASE_SHA" -- event-contracts | tar -x -C "$RUNNER_TEMP/event-contracts-base"
+            node event-contracts/scripts/uyumluluk-kontrolu.mjs "$RUNNER_TEMP/event-contracts-base/event-contracts" event-contracts
+          fi
       - name: Bağımlılık güvenliği
         run: npm audit --audit-level=high
 
@@ -64,14 +165,23 @@ jobs:
           cache: npm
           cache-dependency-path: admin-web/package-lock.json
       - run: npm ci
+      - name: Kanonik mock server bagimliliklarini yukle
+        run: npm ci
+        working-directory: contracts
+      - name: Admin Web API istemcisini kanonik OpenAPI'den tekrar uret
+        run: node ../contracts/scripts/admin-web-client-uret.mjs
+      - name: Uretilen Admin Web API istemcisinin deterministik oldugunu dogrula
+        run: git diff --exit-code -- src/api/uretilen
       - run: npm run format:check
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
-      # GHSA-vfj7-8cjw-p6xm icin upstream yama yoktur. Etkilenen braces,
-      # yalniz repo-kontrollu glob kullanan lint/shadcn gelistirme araclarindadir.
-      # Uretim agaci bloklanir; gecici dev kapsami 2026-11-07'ye kadar yeniden incelenir.
+      # GHSA-vfj7-8cjw-p6xm icin upstream yama yoktur; zafiyet duzeltilmemistir.
+      # Etkilenen braces yalniz repo-kontrollu glob kullanan lint/shadcn gelistirme
+      # araclarindadir. Uretim agaci bloklanir; gelistirme kapsami kabul edilmis
+      # risktir ve factory/invariants/kabul-edilmis-riskler.json kaydi 2026-11-07'de
+      # factory kapisini BLOCKED yapar.
       - name: Uretim bagimliliklarini guvenlik denetiminden gecir
         run: npm audit --omit=dev --audit-level=high
 
@@ -92,9 +202,23 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: contracts/package-lock.json
+      - name: Kanonik mock server bagimliliklarini yukle
+        run: npm ci
+        working-directory: contracts
       - run: flutter pub get --enforce-lockfile
+      - name: Flutter API istemcisini kanonik OpenAPI'den tekrar uret
+        run: node ../contracts/scripts/flutter-client-uret.mjs
+      - name: Uretilen Flutter API istemcisinin deterministik oldugunu dogrula
+        working-directory: .
+        run: git diff --exit-code -- flutter/packages/tup_api flutter/pubspec.lock
       - run: dart format --output=none --set-exit-if-changed apps packages
       - run: flutter analyze
+      - run: flutter test packages/tup_api
       - run: flutter test apps/tup_mobile
       - run: flutter test apps/tup_desktop
       - name: Android debug build

@@ -1,0 +1,17 @@
+{
+  "surum": 1,
+  "riskler": [
+    {
+      "kimlik": "GHSA-vfj7-8cjw-p6xm",
+      "paket": "braces",
+      "bilesen": "admin-web",
+      "kapsam": "GELISTIRME_BAGIMLILIGI",
+      "durum": "KABUL_EDILMIS_RISK",
+      "duzeltildi": false,
+      "gerekce": "Upstream yama yoktur; etkilenen braces yalniz repo-kontrollu glob kullanan lint/shadcn gelistirme araclarindadir.",
+      "telafiEdiciKontrol": "Admin Web uretim agaci CI'da npm audit --omit=dev --audit-level=high ile bloklanir.",
+      "kaynak": "TBP-19",
+      "sonGecerlilik": "2026-11-07"
+    }
+  ]
+}

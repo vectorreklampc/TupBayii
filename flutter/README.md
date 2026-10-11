@@ -38,6 +38,9 @@ Komutlari bu dizinde calistir:
 ```powershell
 flutter pub get
 dart pub workspace list
+cd ../contracts
+npm run generate:flutter
+cd ../flutter
 flutter analyze
 cd apps/tup_desktop
 flutter test

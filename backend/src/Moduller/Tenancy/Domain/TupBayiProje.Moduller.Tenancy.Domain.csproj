@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>TupBayiProje.Moduller.Tenancy.Domain</RootNamespace>
+  </PropertyGroup>
+</Project>

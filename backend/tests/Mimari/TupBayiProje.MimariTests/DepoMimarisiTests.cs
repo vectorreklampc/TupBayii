@@ -13,7 +13,9 @@ public sealed class DepoMimarisiTests
 
         Assert.True(rapor.IncelenenProjeSayisi > 0, "Mimari test en az bir uretim projesi incelemelidir.");
         Assert.Equal(4, rapor.CalistirilanKuralAilesiSayisi);
-        Assert.Empty(rapor.Ihlaller);
+        Assert.True(
+            rapor.Ihlaller.Count == 0,
+            string.Join(Environment.NewLine, rapor.Ihlaller));
     }
 
     [Fact]
