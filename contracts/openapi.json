@@ -3,12 +3,475 @@
   "info": {
     "title": "TupBayiProje HTTP API",
     "version": "0.1.0",
-    "description": "TBP-21 contract temeli. Onayli endpoint'ler kendi Jira islerinde eklenir."
+    "description": "TBP-21 contract temeli. R0.1 pilot operasyonlari TBP-248 izlenebilirlik matrisi ile TBP-249..TBP-253 davranislarina baglidir; Source of Truth canli Jira'dir."
   },
-  "tags": [
-    { "name": "System", "description": "Platform durum operasyonlari." }
-  ],
   "paths": {
+    "/api/v1/oturumlar": {
+      "post": {
+        "operationId": "login",
+        "summary": "Oturum ac (TBP-249)",
+        "description": "Tenant ve rol sunucuda kimlikten cozulur; client tenant kimligi gondermez.",
+        "security": [],
+        "x-anonymous-reason": "Kimlik dogrulama oncesi oturum acma; tenant sunucuda kimlikten cozulur.",
+        "x-idempotency-required": false,
+        "x-retry-semantics": "Her basarili cagri yeni oturum acar; retry ek oturum uretebilir, gereksiz oturum logout veya revoke ile sonlandirilir.",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OturumAcmaIstegi" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "Oturum acildi.",
+            "headers": { "TraceId": { "$ref": "#/components/headers/TraceId" } },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OturumYaniti" } } }
+          },
+          "400": { "$ref": "#/components/responses/Hata" },
+          "401": { "$ref": "#/components/responses/Hata" },
+          "403": { "$ref": "#/components/responses/Hata" },
+          "500": { "$ref": "#/components/responses/Hata" }
+        }
+      }
+    },
+    "/api/v1/oturumlar/mevcut": {
+      "delete": {
+        "operationId": "logout",
+        "summary": "Mevcut oturumu kapat (TBP-249)",
+        "security": [{ "bearerAuth": [] }],
+        "x-idempotency-required": false,
+        "x-retry-semantics": "Oturum kapandiktan sonra ayni token ile tekrar cagri 401 doner; ek etki uretmez.",
+        "responses": {
+          "200": {
+            "description": "Oturum kapatildi.",
+            "headers": { "TraceId": { "$ref": "#/components/headers/TraceId" } },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OturumSonlandirmaSonucu" } } }
+          },
+          "400": { "$ref": "#/components/responses/Hata" },
+          "401": { "$ref": "#/components/responses/Hata" },
+          "403": { "$ref": "#/components/responses/Hata" },
+          "500": { "$ref": "#/components/responses/Hata" }
+        }
+      }
+    },
+    "/api/v1/oturumlar/{oturumId}": {
+      "parameters": [
+        { "name": "oturumId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+      ],
+      "delete": {
+        "operationId": "revokeSession",
+        "summary": "Oturumu iptal et (TBP-249)",
+        "description": "Baska tenant'a ait veya bulunmayan oturum fail closed olarak 404 doner; varlik sizdirilmaz.",
+        "security": [{ "bearerAuth": [] }],
+        "x-idempotency-required": false,
+        "x-retry-semantics": "Zaten sonlandirilmis oturum icin tekrar cagri ek etki uretmez.",
+        "responses": {
+          "200": {
+            "description": "Oturum iptal edildi.",
+            "headers": { "TraceId": { "$ref": "#/components/headers/TraceId" } },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OturumSonlandirmaSonucu" } } }
+          },
+          "400": { "$ref": "#/components/responses/Hata" },
+          "401": { "$ref": "#/components/responses/Hata" },
+          "403": { "$ref": "#/components/responses/Hata" },
+          "404": { "$ref": "#/components/responses/Hata" },
+          "500": { "$ref": "#/components/responses/Hata" }
+        }
+      }
+    },
+    "/api/v1/musteriler": {
+      "get": {
+        "operationId": "searchCustomersByPhone",
+        "summary": "Telefonla musteri ara (TBP-250)",
+        "security": [{ "bearerAuth": [] }],
+        "x-collection": true,
+        "parameters": [
+          { "name": "telefon", "in": "query", "required": true, "schema": { "type": "string", "minLength": 1 } },
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/PageSize" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Eslesen musteriler.",
+            "headers": { "TraceId": { "$ref": "#/components/headers/TraceId" } },
+            "content": { "application/json": { "schema": {
+              "type": "object", "additionalProperties": false, "required": ["data", "pagination"],
+              "properties": {
+                "data": { "type": "array", "items": { "$ref": "#/components/schemas/Musteri" } },
+                "pagination": { "$ref": "#/components/schemas/Sayfalama" }
+              }
+            } } }
+          },
+          "400": { "$ref": "#/components/responses/Hata" },
+          "401": { "$ref": "#/components/responses/Hata" },
+          "403": { "$ref": "#/components/responses/Hata" },
+          "500": { "$ref": "#/components/responses/Hata" }
+        }
+      },
+      "post": {
+        "operationId": "createCustomer",
+        "summary": "Musteri olustur (TBP-250)",
+        "security": [{ "bearerAuth": [] }],
+        "x-idempotency-required": false,
+        "x-retry-semantics": "Retry mukerrer musteri olusturabilir; tekrar denemeden once telefonla arama yapilir.",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MusteriOlusturmaIstegi" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "Musteri olusturuldu.",
+            "headers": { "TraceId": { "$ref": "#/components/headers/TraceId" } },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Musteri" } } }
+          },
+          "400": { "$ref": "#/components/responses/Hata" },
+          "401": { "$ref": "#/components/responses/Hata" },
+          "403": { "$ref": "#/components/responses/Hata" },
+          "500": { "$ref": "#/components/responses/Hata" }
+        }
+      }
+    },
+    "/api/v1/musteriler/{musteriId}": {
+      "parameters": [
+        { "name": "musteriId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+      ],
+      "patch": {
+        "operationId": "updateCustomer",
+        "summary": "Musteri guncelle (TBP-250)",
+        "security": [{ "bearerAuth": [] }],
+        "x-idempotency-required": false,
+        "x-retry-semantics": "Beklenen version stale write'i reddeder; uygulanmis guncellemenin retry'i 409 CONCURRENCY_CONFLICT doner, client guncel kaydi yeniden okur.",
+        "x-error-codes": { "409": ["CONCURRENCY_CONFLICT"] },
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MusteriGuncellemeIstegi" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Musteri guncellendi.",
+            "headers": { "TraceId": { "$ref": "#/components/headers/TraceId" } },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Musteri" } } }
+          },
+          "400": { "$ref": "#/components/responses/Hata" },
+          "401": { "$ref": "#/components/responses/Hata" },
+          "403": { "$ref": "#/components/responses/Hata" },
+          "404": { "$ref": "#/components/responses/Hata" },
+          "409": { "$ref": "#/components/responses/Hata" },
+          "500": { "$ref": "#/components/responses/Hata" }
+        }
+      }
+    },
+    "/api/v1/musteriler/{musteriId}/pasiflestirme": {
+      "parameters": [
+        { "name": "musteriId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+      ],
+      "post": {
+        "operationId": "deactivateCustomer",
+        "summary": "Musteriyi pasife al (TBP-250)",
+        "security": [{ "bearerAuth": [] }],
+        "x-idempotency-required": false,
+        "x-retry-semantics": "Beklenen version stale write'i reddeder; uygulanmis pasiflestirmenin retry'i 409 CONCURRENCY_CONFLICT doner, client guncel kaydi yeniden okur.",
+        "x-error-codes": { "409": ["CONCURRENCY_CONFLICT"] },
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MusteriPasiflestirmeIstegi" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Musteri pasif.",
+            "headers": { "TraceId": { "$ref": "#/components/headers/TraceId" } },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Musteri" } } }
+          },
+          "400": { "$ref": "#/components/responses/Hata" },
+          "401": { "$ref": "#/components/responses/Hata" },
+          "403": { "$ref": "#/components/responses/Hata" },
+          "404": { "$ref": "#/components/responses/Hata" },
+          "409": { "$ref": "#/components/responses/Hata" },
+          "500": { "$ref": "#/components/responses/Hata" }
+        }
+      }
+    },
+    "/api/v1/urunler": {
+      "get": {
+        "operationId": "listProducts",
+        "summary": "Urun listesi (TBP-250)",
+        "security": [{ "bearerAuth": [] }],
+        "x-collection": true,
+        "parameters": [
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/PageSize" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Urunler.",
+            "headers": { "TraceId": { "$ref": "#/components/headers/TraceId" } },
+            "content": { "application/json": { "schema": {
+              "type": "object", "additionalProperties": false, "required": ["data", "pagination"],
+              "properties": {
+                "data": { "type": "array", "items": { "$ref": "#/components/schemas/Urun" } },
+                "pagination": { "$ref": "#/components/schemas/Sayfalama" }
+              }
+            } } }
+          },
+          "400": { "$ref": "#/components/responses/Hata" },
+          "401": { "$ref": "#/components/responses/Hata" },
+          "403": { "$ref": "#/components/responses/Hata" },
+          "500": { "$ref": "#/components/responses/Hata" }
+        }
+      }
+    },
+    "/api/v1/urunler/{urunId}/guncel-fiyat": {
+      "parameters": [
+        { "name": "urunId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+      ],
+      "get": {
+        "operationId": "getCurrentProductPrice",
+        "summary": "Urunun guncel fiyati (TBP-250)",
+        "description": "Fiyat backend'de authoritative'dir; satis tutari client fiyatindan hesaplanmaz.",
+        "security": [{ "bearerAuth": [] }],
+        "x-collection": false,
+        "responses": {
+          "200": {
+            "description": "Guncel fiyat.",
+            "headers": { "TraceId": { "$ref": "#/components/headers/TraceId" } },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UrunFiyati" } } }
+          },
+          "400": { "$ref": "#/components/responses/Hata" },
+          "401": { "$ref": "#/components/responses/Hata" },
+          "403": { "$ref": "#/components/responses/Hata" },
+          "404": { "$ref": "#/components/responses/Hata" },
+          "500": { "$ref": "#/components/responses/Hata" }
+        }
+      }
+    },
+    "/api/v1/stoklar": {
+      "get": {
+        "operationId": "listStock",
+        "summary": "Stok listesi (TBP-251)",
+        "security": [{ "bearerAuth": [] }],
+        "x-collection": true,
+        "parameters": [
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/PageSize" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stok kalemleri.",
+            "headers": { "TraceId": { "$ref": "#/components/headers/TraceId" } },
+            "content": { "application/json": { "schema": {
+              "type": "object", "additionalProperties": false, "required": ["data", "pagination"],
+              "properties": {
+                "data": { "type": "array", "items": { "$ref": "#/components/schemas/StokKalemi" } },
+                "pagination": { "$ref": "#/components/schemas/Sayfalama" }
+              }
+            } } }
+          },
+          "400": { "$ref": "#/components/responses/Hata" },
+          "401": { "$ref": "#/components/responses/Hata" },
+          "403": { "$ref": "#/components/responses/Hata" },
+          "500": { "$ref": "#/components/responses/Hata" }
+        }
+      }
+    },
+    "/api/v1/stok-hareketleri": {
+      "get": {
+        "operationId": "listStockMovements",
+        "summary": "Stok hareket gecmisi (TBP-251)",
+        "description": "Hareketler append-only'dir; duzeltme ve iptal yeni hareket kaydi uretir.",
+        "security": [{ "bearerAuth": [] }],
+        "x-collection": true,
+        "parameters": [
+          { "name": "urunId", "in": "query", "required": false, "schema": { "type": "string", "format": "uuid" } },
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/PageSize" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stok hareketleri.",
+            "headers": { "TraceId": { "$ref": "#/components/headers/TraceId" } },
+            "content": { "application/json": { "schema": {
+              "type": "object", "additionalProperties": false, "required": ["data", "pagination"],
+              "properties": {
+                "data": { "type": "array", "items": { "$ref": "#/components/schemas/StokHareketi" } },
+                "pagination": { "$ref": "#/components/schemas/Sayfalama" }
+              }
+            } } }
+          },
+          "400": { "$ref": "#/components/responses/Hata" },
+          "401": { "$ref": "#/components/responses/Hata" },
+          "403": { "$ref": "#/components/responses/Hata" },
+          "500": { "$ref": "#/components/responses/Hata" }
+        }
+      }
+    },
+    "/api/v1/stok-duzeltmeleri": {
+      "post": {
+        "operationId": "createStockCorrection",
+        "summary": "Yetkili stok duzeltme (TBP-251)",
+        "description": "Yetkisiz kullanici 403 alir. Duzeltme mevcut hareketi degistirmez; yeni DUZELTME hareketi ekler.",
+        "security": [{ "bearerAuth": [] }],
+        "x-idempotency-required": true,
+        "x-error-codes": { "409": ["IDEMPOTENCY_CONFLICT", "IDEMPOTENCY_IN_PROGRESS"] },
+        "parameters": [{ "$ref": "#/components/parameters/IdempotencyKey" }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/StokDuzeltmeIstegi" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "Duzeltme hareketi eklendi.",
+            "headers": { "TraceId": { "$ref": "#/components/headers/TraceId" } },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/StokHareketi" } } }
+          },
+          "400": { "$ref": "#/components/responses/Hata" },
+          "401": { "$ref": "#/components/responses/Hata" },
+          "403": { "$ref": "#/components/responses/Hata" },
+          "409": { "$ref": "#/components/responses/Hata" },
+          "422": { "$ref": "#/components/responses/Hata" },
+          "500": { "$ref": "#/components/responses/Hata" }
+        }
+      }
+    },
+    "/api/v1/satislar": {
+      "post": {
+        "operationId": "completeSale",
+        "summary": "Satis tamamla: nakit veya cari (TBP-252, stok etkisi TBP-251)",
+        "description": "Satis, odeme/cari etkisi ve dolu cikis/bos iade stok hareketleri tek atomik islemde yazilir. Fiyat ve tutar sunucuda hesaplanir. Is kurali reddi (ornegin yetersiz stok) 422 doner; kararli kodlari ilgili Jira tanimlar.",
+        "security": [{ "bearerAuth": [] }],
+        "x-idempotency-required": true,
+        "x-error-codes": { "409": ["IDEMPOTENCY_CONFLICT", "IDEMPOTENCY_IN_PROGRESS"] },
+        "parameters": [{ "$ref": "#/components/parameters/IdempotencyKey" }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SatisTamamlamaIstegi" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "Satis tamamlandi.",
+            "headers": { "TraceId": { "$ref": "#/components/headers/TraceId" } },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Satis" } } }
+          },
+          "400": { "$ref": "#/components/responses/Hata" },
+          "401": { "$ref": "#/components/responses/Hata" },
+          "403": { "$ref": "#/components/responses/Hata" },
+          "409": { "$ref": "#/components/responses/Hata" },
+          "422": { "$ref": "#/components/responses/Hata" },
+          "500": { "$ref": "#/components/responses/Hata" }
+        }
+      }
+    },
+    "/api/v1/satislar/{satisId}/iptal": {
+      "parameters": [
+        { "name": "satisId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+      ],
+      "post": {
+        "operationId": "cancelSale",
+        "summary": "Satisi ters kayitla iptal et (TBP-252)",
+        "description": "Tamamlanmis kayit degistirilmez; kasa/cari ve stok etkileri atomik ters kayitlarla geri alinir ve audit uretilir. Iptal edilmis satis ikinci ters kayit uretmez.",
+        "security": [{ "bearerAuth": [] }],
+        "x-idempotency-required": true,
+        "x-error-codes": { "409": ["IDEMPOTENCY_CONFLICT", "IDEMPOTENCY_IN_PROGRESS"] },
+        "parameters": [{ "$ref": "#/components/parameters/IdempotencyKey" }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SatisIptalIstegi" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Satis iptal edildi.",
+            "headers": { "TraceId": { "$ref": "#/components/headers/TraceId" } },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Satis" } } }
+          },
+          "400": { "$ref": "#/components/responses/Hata" },
+          "401": { "$ref": "#/components/responses/Hata" },
+          "403": { "$ref": "#/components/responses/Hata" },
+          "404": { "$ref": "#/components/responses/Hata" },
+          "409": { "$ref": "#/components/responses/Hata" },
+          "422": { "$ref": "#/components/responses/Hata" },
+          "500": { "$ref": "#/components/responses/Hata" }
+        }
+      }
+    },
+    "/api/v1/kasa-gunleri": {
+      "post": {
+        "operationId": "openCashDay",
+        "summary": "Kasa acilisi (TBP-253)",
+        "description": "Is gunu sunucuda belirlenir.",
+        "security": [{ "bearerAuth": [] }],
+        "x-idempotency-required": true,
+        "x-error-codes": { "409": ["IDEMPOTENCY_CONFLICT", "IDEMPOTENCY_IN_PROGRESS"] },
+        "parameters": [{ "$ref": "#/components/parameters/IdempotencyKey" }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/KasaAcilisIstegi" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "Kasa acildi.",
+            "headers": { "TraceId": { "$ref": "#/components/headers/TraceId" } },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/KasaAcilisi" } } }
+          },
+          "400": { "$ref": "#/components/responses/Hata" },
+          "401": { "$ref": "#/components/responses/Hata" },
+          "403": { "$ref": "#/components/responses/Hata" },
+          "409": { "$ref": "#/components/responses/Hata" },
+          "500": { "$ref": "#/components/responses/Hata" }
+        }
+      }
+    },
+    "/api/v1/kasa-gunleri/{tarih}/ozet": {
+      "parameters": [
+        { "name": "tarih", "in": "path", "required": true, "schema": { "type": "string", "format": "date" } }
+      ],
+      "get": {
+        "operationId": "getDailyCashSummary",
+        "summary": "Gunluk kasa/cari ozeti (TBP-253)",
+        "description": "Ozet authoritative projection'dan okunur; client hesabi esas alinmaz.",
+        "security": [{ "bearerAuth": [] }],
+        "x-collection": false,
+        "responses": {
+          "200": {
+            "description": "Gunluk ozet.",
+            "headers": { "TraceId": { "$ref": "#/components/headers/TraceId" } },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GunlukKasaOzeti" } } }
+          },
+          "400": { "$ref": "#/components/responses/Hata" },
+          "401": { "$ref": "#/components/responses/Hata" },
+          "403": { "$ref": "#/components/responses/Hata" },
+          "404": { "$ref": "#/components/responses/Hata" },
+          "500": { "$ref": "#/components/responses/Hata" }
+        }
+      }
+    },
+    "/api/v1/kasa-gunleri/{tarih}/gun-sonu-sayimi": {
+      "parameters": [
+        { "name": "tarih", "in": "path", "required": true, "schema": { "type": "string", "format": "date" } }
+      ],
+      "post": {
+        "operationId": "submitDayEndCount",
+        "summary": "Gun sonu sayimi ve kapanis (TBP-253)",
+        "description": "Ayni gun icin tekrar kapanis ikinci kapanis kaydi uretmez; kapanmis gun icin farkli anahtarla gelen istek 409 doner.",
+        "security": [{ "bearerAuth": [] }],
+        "x-idempotency-required": true,
+        "x-error-codes": { "409": ["IDEMPOTENCY_CONFLICT", "IDEMPOTENCY_IN_PROGRESS"] },
+        "parameters": [{ "$ref": "#/components/parameters/IdempotencyKey" }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GunSonuSayimiIstegi" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "Gun sonu sayimi kaydedildi.",
+            "headers": { "TraceId": { "$ref": "#/components/headers/TraceId" } },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GunSonuSayimi" } } }
+          },
+          "400": { "$ref": "#/components/responses/Hata" },
+          "401": { "$ref": "#/components/responses/Hata" },
+          "403": { "$ref": "#/components/responses/Hata" },
+          "404": { "$ref": "#/components/responses/Hata" },
+          "409": { "$ref": "#/components/responses/Hata" },
+          "500": { "$ref": "#/components/responses/Hata" }
+        }
+      }
+    },
     "/api/v1/system/health": {
       "get": {
         "tags": ["System"],
@@ -44,7 +507,17 @@
       }
     }
   },
+  "tags": [
+    { "name": "System", "description": "Platform durum operasyonlari." }
+  ],
   "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Tenant, kullanici ve rol sunucuda token kimliginden cozulur; client tenant beyani authoritative degildir. Gecersiz veya baska tenant kapsamli token fail closed reddedilir."
+      }
+    },
     "schemas": {
       "SistemSaglik": {
         "type": "object",
@@ -88,6 +561,270 @@
           "totalItems": { "type": "integer", "minimum": 0 },
           "totalPages": { "type": "integer", "minimum": 0 }
         }
+      },
+      "ParaTutari": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["tutar", "paraBirimi"],
+        "properties": {
+          "tutar": { "type": "string", "pattern": "^-?(0|[1-9][0-9]*)\\.[0-9]{2}$", "description": "Iki ondalikli decimal metin." },
+          "paraBirimi": { "type": "string", "pattern": "^[A-Z]{3}$", "description": "ISO 4217 kodu." }
+        }
+      },
+      "OturumAcmaIstegi": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kullaniciAdi", "parola"],
+        "properties": {
+          "kullaniciAdi": { "type": "string", "minLength": 1 },
+          "parola": { "type": "string", "minLength": 1, "format": "password", "writeOnly": true }
+        }
+      },
+      "OturumYaniti": {
+        "type": "object",
+        "required": ["oturumId", "accessToken", "tokenType", "sonaErmeZamaniUtc"],
+        "properties": {
+          "oturumId": { "type": "string", "format": "uuid" },
+          "accessToken": { "type": "string" },
+          "tokenType": { "type": "string", "enum": ["Bearer"] },
+          "sonaErmeZamaniUtc": { "type": "string", "format": "date-time" }
+        }
+      },
+      "OturumSonlandirmaSonucu": {
+        "type": "object",
+        "required": ["oturumId", "sonlandirmaZamaniUtc"],
+        "properties": {
+          "oturumId": { "type": "string", "format": "uuid" },
+          "sonlandirmaZamaniUtc": { "type": "string", "format": "date-time" }
+        }
+      },
+      "MusteriOlusturmaIstegi": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["ad", "telefon"],
+        "properties": {
+          "ad": { "type": "string", "minLength": 1 },
+          "telefon": { "type": "string", "minLength": 1 }
+        }
+      },
+      "MusteriGuncellemeIstegi": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["version"],
+        "minProperties": 2,
+        "properties": {
+          "version": { "type": "integer", "minimum": 1, "description": "Beklenen version; stale ise 409 CONCURRENCY_CONFLICT." },
+          "ad": { "type": "string", "minLength": 1 },
+          "telefon": { "type": "string", "minLength": 1 }
+        }
+      },
+      "MusteriPasiflestirmeIstegi": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["version"],
+        "properties": {
+          "version": { "type": "integer", "minimum": 1, "description": "Beklenen version; stale ise 409 CONCURRENCY_CONFLICT." }
+        }
+      },
+      "Musteri": {
+        "type": "object",
+        "required": ["musteriId", "ad", "telefon", "aktifMi", "version"],
+        "properties": {
+          "musteriId": { "type": "string", "format": "uuid" },
+          "ad": { "type": "string" },
+          "telefon": { "type": "string" },
+          "aktifMi": { "type": "boolean" },
+          "version": { "type": "integer", "minimum": 1 }
+        }
+      },
+      "Urun": {
+        "type": "object",
+        "required": ["urunId", "ad"],
+        "properties": {
+          "urunId": { "type": "string", "format": "uuid" },
+          "ad": { "type": "string" }
+        }
+      },
+      "UrunFiyati": {
+        "type": "object",
+        "required": ["urunId", "birimFiyat"],
+        "properties": {
+          "urunId": { "type": "string", "format": "uuid" },
+          "birimFiyat": { "$ref": "#/components/schemas/ParaTutari" }
+        }
+      },
+      "TupDurumu": {
+        "type": "string",
+        "enum": ["FULL", "EMPTY"]
+      },
+      "StokKalemi": {
+        "type": "object",
+        "required": ["urunId", "tupDurumu", "miktar"],
+        "properties": {
+          "urunId": { "type": "string", "format": "uuid" },
+          "tupDurumu": { "$ref": "#/components/schemas/TupDurumu" },
+          "miktar": { "type": "integer", "minimum": 0 }
+        }
+      },
+      "StokHareketi": {
+        "type": "object",
+        "description": "Append-only stok hareketi; kaynakId ayni mantiksal hareketin tekrar yazilmasini engelleyen is referansidir.",
+        "required": ["stokHareketiId", "urunId", "tupDurumu", "miktarDegisimi", "hareketTuru", "kaynakId", "olusmaZamaniUtc"],
+        "properties": {
+          "stokHareketiId": { "type": "string", "format": "uuid" },
+          "urunId": { "type": "string", "format": "uuid" },
+          "tupDurumu": { "$ref": "#/components/schemas/TupDurumu" },
+          "miktarDegisimi": { "type": "integer" },
+          "hareketTuru": { "type": "string", "enum": ["SATIS", "SATIS_IPTALI", "BOS_IADE", "DUZELTME"] },
+          "kaynakId": { "type": "string", "format": "uuid" },
+          "olusmaZamaniUtc": { "type": "string", "format": "date-time" }
+        }
+      },
+      "StokDuzeltmeIstegi": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["urunId", "tupDurumu", "miktarDegisimi"],
+        "properties": {
+          "urunId": { "type": "string", "format": "uuid" },
+          "tupDurumu": { "$ref": "#/components/schemas/TupDurumu" },
+          "miktarDegisimi": { "type": "integer", "not": { "const": 0 } },
+          "aciklama": { "type": "string", "minLength": 1 }
+        }
+      },
+      "SatisKalemi": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["urunId", "miktar"],
+        "properties": {
+          "urunId": { "type": "string", "format": "uuid" },
+          "miktar": { "type": "integer", "minimum": 1, "description": "Satilan FULL adet." },
+          "bosIadeMiktari": { "type": "integer", "minimum": 0, "description": "Iade alinan EMPTY adet." }
+        }
+      },
+      "NakitOdeme": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["odemeTuru"],
+        "properties": {
+          "odemeTuru": { "type": "string", "enum": ["NAKIT"] }
+        }
+      },
+      "CariOdeme": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["odemeTuru", "musteriId"],
+        "properties": {
+          "odemeTuru": { "type": "string", "enum": ["CARI"] },
+          "musteriId": { "type": "string", "format": "uuid" }
+        }
+      },
+      "SatisTamamlamaIstegi": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kalemler", "odeme"],
+        "properties": {
+          "kalemler": { "type": "array", "minItems": 1, "items": { "$ref": "#/components/schemas/SatisKalemi" } },
+          "odeme": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/NakitOdeme" },
+              { "$ref": "#/components/schemas/CariOdeme" }
+            ],
+            "discriminator": {
+              "propertyName": "odemeTuru",
+              "mapping": {
+                "NAKIT": "#/components/schemas/NakitOdeme",
+                "CARI": "#/components/schemas/CariOdeme"
+              }
+            }
+          }
+        }
+      },
+      "SatisKalemiSonucu": {
+        "type": "object",
+        "required": ["urunId", "miktar", "bosIadeMiktari", "birimFiyat", "tutar"],
+        "properties": {
+          "urunId": { "type": "string", "format": "uuid" },
+          "miktar": { "type": "integer", "minimum": 1 },
+          "bosIadeMiktari": { "type": "integer", "minimum": 0 },
+          "birimFiyat": { "$ref": "#/components/schemas/ParaTutari" },
+          "tutar": { "$ref": "#/components/schemas/ParaTutari" }
+        }
+      },
+      "Satis": {
+        "type": "object",
+        "required": ["satisId", "durum", "odemeTuru", "kalemler", "toplamTutar", "stokHareketleri", "olusmaZamaniUtc"],
+        "properties": {
+          "satisId": { "type": "string", "format": "uuid" },
+          "durum": { "type": "string", "enum": ["TAMAMLANDI", "IPTAL_EDILDI"] },
+          "odemeTuru": { "type": "string", "enum": ["NAKIT", "CARI"] },
+          "musteriId": { "type": "string", "format": "uuid" },
+          "kalemler": { "type": "array", "items": { "$ref": "#/components/schemas/SatisKalemiSonucu" } },
+          "toplamTutar": { "$ref": "#/components/schemas/ParaTutari" },
+          "stokHareketleri": { "type": "array", "items": { "$ref": "#/components/schemas/StokHareketi" } },
+          "olusmaZamaniUtc": { "type": "string", "format": "date-time" }
+        }
+      },
+      "SatisIptalIstegi": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "aciklama": { "type": "string", "minLength": 1 }
+        }
+      },
+      "KasaAcilisIstegi": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["acilisTutari"],
+        "properties": {
+          "acilisTutari": { "$ref": "#/components/schemas/ParaTutari" }
+        }
+      },
+      "KasaAcilisi": {
+        "type": "object",
+        "required": ["tarih", "acilisTutari", "acilisZamaniUtc"],
+        "properties": {
+          "tarih": { "type": "string", "format": "date" },
+          "acilisTutari": { "$ref": "#/components/schemas/ParaTutari" },
+          "acilisZamaniUtc": { "type": "string", "format": "date-time" }
+        }
+      },
+      "GunSonuSayimiIstegi": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["sayilanNakitTutari"],
+        "properties": {
+          "sayilanNakitTutari": { "$ref": "#/components/schemas/ParaTutari" }
+        }
+      },
+      "GunSonuSayimi": {
+        "type": "object",
+        "required": ["tarih", "sayilanNakitTutari", "kayitZamaniUtc"],
+        "properties": {
+          "tarih": { "type": "string", "format": "date" },
+          "sayilanNakitTutari": { "$ref": "#/components/schemas/ParaTutari" },
+          "kayitZamaniUtc": { "type": "string", "format": "date-time" }
+        }
+      },
+      "GunlukKasaOzeti": {
+        "type": "object",
+        "description": "Kasa gununun sunucu projection'indan okunan authoritative ozeti; tum tutarlar sunucuda hesaplanir, client hesaplamaz ve yalniz gosterir. Senaryo: kasa acilisi acilisTutari'ni, gun icindeki satislar nakitToplami/cariToplami'ni belirler; gun sonu sayimi kaydedilene kadar sayilanNakitTutari ve sayimFarki null doner, sayimdan sonra dolu doner.",
+        "required": ["tarih", "nakitToplami", "cariToplami", "satisToplami", "acilisTutari", "beklenenKasaTutari", "sayilanNakitTutari", "sayimFarki"],
+        "properties": {
+          "tarih": { "type": "string", "format": "date" },
+          "nakitToplami": { "$ref": "#/components/schemas/ParaTutari", "description": "Gunun nakit satislarinin NET toplami; iptal edilen satisin atomik ters kaydi dusulur." },
+          "cariToplami": { "$ref": "#/components/schemas/ParaTutari", "description": "Gunun cari satislarinin NET toplami; iptal edilen satisin atomik ters kaydi dusulur." },
+          "satisToplami": { "$ref": "#/components/schemas/ParaTutari", "description": "Gunluk satis toplami; nakitToplami + cariToplami." },
+          "acilisTutari": { "$ref": "#/components/schemas/ParaTutari", "description": "Kasa acilisinda kaydedilen tutar." },
+          "beklenenKasaTutari": { "$ref": "#/components/schemas/ParaTutari", "description": "Kasada olmasi gereken nakit; acilisTutari + nakitToplami. Cari satis kasaya nakit girisi yapmaz." },
+          "sayilanNakitTutari": {
+            "oneOf": [{ "$ref": "#/components/schemas/ParaTutari" }, { "type": "null" }],
+            "description": "Gun sonu sayiminda kaydedilen nakit; sayim kaydedilmeden once null."
+          },
+          "sayimFarki": {
+            "oneOf": [{ "$ref": "#/components/schemas/ParaTutari" }, { "type": "null" }],
+            "description": "sayilanNakitTutari - beklenenKasaTutari; negatif kasa eksigi, pozitif kasa fazlasidir. Sayim kaydedilmeden once null."
+          }
+        }
       }
     },
     "headers": {
@@ -117,7 +854,7 @@
       },
       "IdempotencyKey": {
         "name": "Idempotency-Key", "in": "header", "required": true,
-        "description": "Ayni logical islem retry'larinda ayni kalan client anahtari.",
+        "description": "Ayni logical islem retry'larinda ayni kalan client anahtari; kapsam sunucuda (tenant, operasyon, anahtar) olarak cozulur. Ayni anahtar ve ayni payload kayitli sonucu ikinci etki olmadan doner. Ayni anahtar farkli payload ile 409 IDEMPOTENCY_CONFLICT doner. Ilk istek islenirken gelen kopya ikinci yurutme baslatmaz, 409 IDEMPOTENCY_IN_PROGRESS doner; client ayni anahtar ve payload ile daha sonra tekrar dener.",
         "schema": { "type": "string", "minLength": 1 }
       }
     }

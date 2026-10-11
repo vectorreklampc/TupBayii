@@ -10,3 +10,6 @@ analyzer:
     unnecessary_brace_in_string_interps: ignore
     unnecessary_this: ignore
     unused_import: ignore
+    # Uretilen enum sabitleri ve null-aware koleksiyon kaliplari.
+    constant_identifier_names: ignore
+    use_null_aware_elements: ignore

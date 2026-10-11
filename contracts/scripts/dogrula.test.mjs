@@ -10,7 +10,7 @@ const iz = { $ref: '#/components/headers/TraceId' };
 
 function listeBelgesi() {
   const belge = kopyala();
-  belge.components.securitySchemes = { Kimlik: { type: 'http', scheme: 'bearer' } };
+  belge.components.securitySchemes = { ...belge.components.securitySchemes, Kimlik: { type: 'http', scheme: 'bearer' } };
   belge.paths['/api/satislar'] = {
     get: {
       operationId: 'satislariGetir', security: [{ Kimlik: [] }], 'x-collection': true,

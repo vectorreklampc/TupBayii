@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * TupBayiProje HTTP API
- * TBP-21 contract temeli. Onayli endpoint\'ler kendi Jira islerinde eklenir.
+ * TBP-21 contract temeli. R0.1 pilot operasyonlari TBP-248 izlenebilirlik matrisi ile TBP-249..TBP-253 davranislarina baglidir; Source of Truth canli Jira\'dir.
  *
  * The version of the OpenAPI document: 0.1.0
  *
