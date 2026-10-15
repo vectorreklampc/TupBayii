@@ -18,6 +18,7 @@
     <ProjectReference Include="../Domain/TupBayiProje.Moduller.Tenancy.Domain.csproj" />
     <ProjectReference Include="../Sozlesmeler/TupBayiProje.Moduller.Tenancy.Sozlesmeler.csproj" />
     <ProjectReference Include="../Uygulama/TupBayiProje.Moduller.Tenancy.Uygulama.csproj" />
+    <ProjectReference Include="../../../Ortak/Gozlemlenebilirlik/TupBayiProje.Gozlemlenebilirlik.csproj" />
   </ItemGroup>
 
   <ItemGroup>

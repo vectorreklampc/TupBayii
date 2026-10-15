@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>TupBayiProje.Moduller.Inventory.Altyapi</RootNamespace>
+    <TupBayiVeritabaniSiniri>Tenant</TupBayiVeritabaniSiniri>
+    <TupBayiTenantBasinaFizikselVeritabani>true</TupBayiTenantBasinaFizikselVeritabani>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Domain\TupBayiProje.Moduller.Inventory.Domain.csproj" />
+    <ProjectReference Include="..\Uygulama\TupBayiProje.Moduller.Inventory.Uygulama.csproj" />
+  </ItemGroup>
+</Project>

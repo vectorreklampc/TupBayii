@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <RootNamespace>TupBayiProje.Tenancy.BirimTests</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\Moduller\Tenancy\Uygulama\TupBayiProje.Moduller.Tenancy.Uygulama.csproj" />
+    <ProjectReference Include="..\..\..\src\Moduller\Tenancy\Altyapi\TupBayiProje.Moduller.Tenancy.Altyapi.csproj" />
+    <ProjectReference Include="..\..\..\src\Ortak\Gozlemlenebilirlik\TupBayiProje.Gozlemlenebilirlik.csproj" />
+  </ItemGroup>
+</Project>
