@@ -2,6 +2,13 @@
 
 Bu dizin otonom yazilim fabrikasi bilesenleri icin kanonik koktur.
 
+## TBP-238 kontrollu teslimat hatti
+
+Kokteki `ship.sh`; candidate, staging ve Human Gate kontrollu production
+asamalarini `src/teslimat-hatti.mjs` uzerinden orkestre eder. Immutable artifact,
+deployment lock, migration/backup/rollback kaniti, smoke/telemetry kapilari ve
+append-only release audit ayrintilari `TESLIMAT_HATTI.md` dosyasindadir.
+
 ## SM-FACTORY-001 durum makinesi
 
 `TBP-29` kapsamindaki yazilim fabrikasi is yasam dongusunun tek sahibi
